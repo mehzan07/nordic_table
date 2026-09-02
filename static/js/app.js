@@ -1526,3 +1526,159 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+
+/* ===== Backend V1: real reservation storage ===== */
+(function(){
+  "use strict";
+
+  function backendLang(){
+    const s=(localStorage.getItem("testRestaurantLanguageV12") ||
+             localStorage.getItem("testRestaurantLanguage") ||
+             document.documentElement.lang || "sv").toLowerCase();
+    return s.startsWith("en") ? "en" : "sv";
+  }
+
+  function byId(id){ return document.getElementById(id); }
+
+  function currentReference(){
+    const ready=byId("readyRefValue");
+    if(ready && ready.textContent && ready.textContent.trim() !== "—") return ready.textContent.trim();
+
+    const refBox=byId("reservationReference");
+    if(refBox && refBox.textContent){
+      const m=refBox.textContent.match(/TR-\d{6}-\d{4}/);
+      if(m) return m[0];
+    }
+
+    if(typeof window.v14ReservationReference==="function"){
+      try{return window.v14ReservationReference();}catch(e){}
+    }
+    return "";
+  }
+
+  function selectedDishPayload(){
+    try{
+      if(typeof selectedDishV29!=="undefined" && selectedDishV29){
+        return {
+          name_sv:selectedDishV29.titleSv || selectedDishV29.key || "",
+          name_en:selectedDishV29.titleEn || selectedDishV29.key || "",
+          price:selectedDishV29.price || ""
+        };
+      }
+    }catch(e){}
+    return null;
+  }
+
+  function reservationPayload(){
+    const dish=selectedDishPayload();
+    return {
+      reference: currentReference(),
+      name: (byId("guestName")?.value || "").trim(),
+      phone: (byId("guestPhone")?.value || "").trim(),
+      email: (byId("guestEmail")?.value || "").trim(),
+      guests: Number(byId("guestCount")?.value || 0),
+      reservation_date: byId("reservationDate")?.value || "",
+      reservation_time: byId("reservationTime")?.value || "",
+      special_requests: (byId("specialRequests")?.value || "").trim(),
+      selected_dish_name_sv: dish?.name_sv || "",
+      selected_dish_name_en: dish?.name_en || "",
+      selected_dish_price: dish?.price || "",
+      language: backendLang()
+    };
+  }
+
+  function setMessage(text, kind){
+    const el=byId("backendReservationMessage");
+    if(!el)return;
+    el.textContent=text;
+    el.className="backend-message " + (kind || "");
+    el.hidden=false;
+  }
+
+  async function saveReservation(){
+    const btn=byId("saveReservationBackend");
+    if(!btn)return;
+
+    const sv=backendLang()==="sv";
+    btn.disabled=true;
+    btn.textContent=sv ? "Sparar…" : "Saving…";
+    setMessage(sv ? "Skickar bokningen till restaurangens server…" : "Sending the reservation to the restaurant server…","info");
+
+    try{
+      const response=await fetch("/api/reservations",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(reservationPayload())
+      });
+
+      const data=await response.json().catch(()=>({}));
+
+      if(response.ok){
+        setMessage(
+          sv
+            ? `Bokningen är sparad. Referens: ${data.reference}. Status: Väntar på bekräftelse.`
+            : `Reservation saved. Reference: ${data.reference}. Status: Pending confirmation.`,
+          "success"
+        );
+        btn.textContent=sv ? "Bokning sparad ✓" : "Reservation saved ✓";
+        btn.disabled=true;
+      }else if(response.status===409){
+        setMessage(
+          sv
+            ? "Den här bokningen verkar redan vara sparad för samma e-post, datum och tid."
+            : "This reservation appears to have already been saved for the same email, date and time.",
+          "warning"
+        );
+        btn.disabled=false;
+        btn.textContent=sv ? "Spara bokning" : "Save reservation";
+      }else{
+        const msg=data.error || (sv ? "Bokningen kunde inte sparas." : "The reservation could not be saved.");
+        setMessage(msg,"error");
+        btn.disabled=false;
+        btn.textContent=sv ? "Försök igen" : "Try again";
+      }
+    }catch(err){
+      setMessage(
+        sv
+          ? "Kan inte nå backend-servern. Kontrollera att Flask körs i terminalen."
+          : "Cannot reach the backend server. Make sure Flask is running in the terminal.",
+        "error"
+      );
+      btn.disabled=false;
+      btn.textContent=sv ? "Försök igen" : "Try again";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded",function(){
+    const btn=byId("saveReservationBackend");
+    if(btn){
+      btn.textContent=backendLang()==="sv" ? "Spara bokning" : "Save reservation";
+      btn.addEventListener("click",saveReservation);
+    }
+
+    document.querySelectorAll("[data-lang]").forEach(function(langBtn){
+      langBtn.addEventListener("click",function(){
+        setTimeout(function(){
+          const b=byId("saveReservationBackend");
+          if(b && !b.disabled){
+            b.textContent=backendLang()==="sv" ? "Spara bokning" : "Save reservation";
+          }
+        },30);
+      });
+    });
+
+    const newBtn=byId("newReservation");
+    if(newBtn){
+      newBtn.addEventListener("click",function(){
+        const b=byId("saveReservationBackend");
+        if(b){
+          b.disabled=false;
+          b.textContent=backendLang()==="sv" ? "Spara bokning" : "Save reservation";
+        }
+        const msg=byId("backendReservationMessage");
+        if(msg) msg.hidden=true;
+      });
+    }
+  });
+})();

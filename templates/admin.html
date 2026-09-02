@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reservationer – Test Restaurant</title>
+  <style>
+    :root{font-family:Inter,Segoe UI,Arial,sans-serif;color:#171717;background:#f5f3ee}
+    *{box-sizing:border-box}
+    body{margin:0}
+    header{background:#171717;color:white;padding:24px}
+    header .wrap{max-width:1200px;margin:auto;display:flex;gap:16px;align-items:center;justify-content:space-between}
+    header a{color:white}
+    main{max-width:1200px;margin:32px auto;padding:0 18px}
+    .summary{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 22px}
+    .pill{background:white;border:1px solid #ddd5c9;padding:10px 14px;border-radius:999px}
+    .table-wrap{overflow:auto;background:white;border:1px solid #ddd5c9;border-radius:14px}
+    table{width:100%;border-collapse:collapse;min-width:1000px}
+    th,td{padding:13px 12px;text-align:left;border-bottom:1px solid #eee8df;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.07em;background:#faf8f4}
+    td{font-size:14px}
+    .ref{font-weight:800;white-space:nowrap}
+    .dish{max-width:220px}
+    .status{font-weight:800;text-transform:capitalize}
+    form{display:flex;gap:6px}
+    button{border:1px solid #222;background:white;padding:7px 9px;border-radius:7px;cursor:pointer}
+    button.confirm{background:#171717;color:white}
+    .empty{text-align:center;padding:48px 20px}
+    .note{font-size:12px;opacity:.65;margin-top:18px}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div>
+      <strong>Test Restaurant – Admin</strong><br>
+      <small>Backend V1 · SQLite</small>
+    </div>
+    <a href="/">← Till restaurangens webbplats</a>
+  </div>
+</header>
+<main>
+  <div class="summary">
+    <div class="pill">Totalt: <strong>{{ reservations|length }}</strong></div>
+    <div class="pill">Väntar: <strong>{{ reservations|selectattr('status','equalto','pending')|list|length }}</strong></div>
+    <div class="pill">Bekräftade: <strong>{{ reservations|selectattr('status','equalto','confirmed')|list|length }}</strong></div>
+  </div>
+
+  {% if reservations %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Referens</th><th>Datum</th><th>Tid</th><th>Gäster</th>
+          <th>Kund</th><th>Kontakt</th><th>Vald rätt</th><th>Önskemål</th>
+          <th>Status</th><th>Åtgärd</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in reservations %}
+        <tr>
+          <td class="ref">{{ r.reference }}</td>
+          <td>{{ r.reservation_date }}</td>
+          <td>{{ r.reservation_time }}</td>
+          <td>{{ r.guests }}</td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.phone }}<br>{{ r.email }}</td>
+          <td class="dish">
+            {% if r.selected_dish_name_sv %}
+              {{ r.selected_dish_name_sv }}{% if r.selected_dish_price %} – {{ r.selected_dish_price }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ r.special_requests or '—' }}</td>
+          <td class="status">{{ r.status }}</td>
+          <td>
+            <form method="post" action="/admin/reservations/{{ r.id }}/status">
+              <button class="confirm" name="status" value="confirmed">Bekräfta</button>
+              <button name="status" value="pending">Väntar</button>
+              <button name="status" value="cancelled">Avboka</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="table-wrap empty">
+      <h2>Inga bokningar ännu</h2>
+      <p>Gör en testbokning på webbplatsen och klicka på <strong>Spara bokning</strong>.</p>
+    </div>
+  {% endif %}
+
+  <p class="note">Backend V1 är en lokal demo. Admin-sidan har ännu ingen inloggning och ska inte publiceras offentligt i detta skick.</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Local database
+reservations.db
+
+# Editor/OS
+.vscode/
+.DS_Store
+Thumbs.db

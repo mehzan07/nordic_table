@@ -450,3 +450,23 @@
 .reservation-ready-grid .reviewSelectedDishRow[hidden]{
   display:none!important;
 }
+
+
+/* Backend V1 */
+.backend-version-badge{
+  position:fixed;right:14px;bottom:14px;z-index:9999;
+  background:#111;color:#fff;padding:7px 11px;border-radius:999px;
+  font:700 11px/1 Arial,sans-serif;letter-spacing:.08em;opacity:.82
+}
+.backend-save-btn{font-weight:800}
+.backend-message{
+  margin-top:14px;padding:13px 15px;border-radius:10px;
+  font-size:14px;line-height:1.45;border:1px solid rgba(0,0,0,.12)
+}
+.backend-message.info{background:#f4f6f8}
+.backend-message.success{background:#edf8ef;border-color:#b9dfc0}
+.backend-message.warning{background:#fff7df;border-color:#eed58b}
+.backend-message.error{background:#fff0f0;border-color:#efb0b0}
+.backend-admin-link{text-align:center;padding:10px 16px 24px}
+.backend-admin-link a{font-size:12px;opacity:.65}
+.backend-admin-link a:hover{opacity:1}
