@@ -22,20 +22,59 @@ filters.innerHTML=cats.map(c=>`<button class="${c==="All"?"active":""}" data-cat
 let currentCat="All", currentQuery="";
 function render(){
   const q=currentQuery.trim().toLowerCase();
-  const items=dishes.filter(d=>(currentCat==="All"||d[0]===currentCat)&&(!q||`${d[1]} ${d[2]} ${d[0]}`.toLowerCase().includes(q)));
-  grid.innerHTML=items.length?items.map((d,i)=>`<article class="dish" tabindex="0" data-index="${dishes.indexOf(d)}"><div class="dishImage"><img loading="lazy" src="${d[4]}" alt="${d[1]}"><span class="dishTag">${d[0]}</span><span class="viewDish">View details</span></div><div><span class="price">${d[3]}</span><h3>${d[1]}</h3><p>${d[2]}</p></div></article>`).join(""):`<div class="emptyMenu"><h3>No dishes found</h3><p>Try another search or choose “All”.</p></div>`;
+  const list=dishes.filter(d=>{
+    const catOk=currentCat==="All"||d[0]===currentCat;
+    const sv=(typeof dishSv!=="undefined"&&dishSv[d[1]])||[];
+    const haystack=`${d[1]} ${d[2]} ${d[0]} ${sv[0]||""} ${sv[1]||""} ${(typeof categorySv!=="undefined"&&categorySv[d[0]])||""}`.toLowerCase();
+    return catOk && (!q || haystack.includes(q));
+  });
+
+  const lang=(typeof currentLanguage!=="undefined" ? currentLanguage : "sv");
+  const viewText=lang==="sv" ? "Visa detaljer" : "View details";
+  const bookText=lang==="sv" ? "Boka bord" : "Book a table";
+
+  grid.innerHTML=list.length ? list.map(d=>{
+    const index=dishes.indexOf(d);
+    const sv=(typeof dishSv!=="undefined"&&dishSv[d[1]])||null;
+    const title=lang==="sv"&&sv?sv[0]:d[1];
+    const desc=lang==="sv"&&sv?sv[1]:d[2];
+    const cat=lang==="sv"&&typeof categorySv!=="undefined"?(categorySv[d[0]]||d[0]):d[0];
+    return `<article class="dish" data-index="${index}" tabindex="0">
+      <img src="${d[4]}" alt="${title}" loading="lazy">
+      <div class="dishContent">
+        <div class="dishMeta"><small>${cat}</small><span class="price">${d[3]}</span></div>
+        <h3>${title}</h3>
+        <p>${desc}</p>
+        <div class="dishActions">
+          <button type="button" class="dishDetailsBtn" data-action="details" data-index="${index}">${viewText}</button>
+          <button type="button" class="dishBookBtn" data-action="book" data-index="${index}">${bookText}</button>
+        </div>
+      </div>
+    </article>`;
+  }).join("") : `<div class="emptyMenu"><h3>${lang==="sv"?"Inga rätter hittades":"No dishes found"}</h3><p>${lang==="sv"?"Prova en annan sökning eller välj Alla.":"Try another search or choose All."}</p></div>`;
 }
 render();
 filters.addEventListener("click",e=>{if(e.target.tagName!=="BUTTON")return;filters.querySelectorAll("button").forEach(b=>b.classList.remove("active"));e.target.classList.add("active");currentCat=e.target.dataset.cat;render()});
 search.addEventListener("input",()=>{currentQuery=search.value;render()});
 
-const modal=document.querySelector("#dishModal"), modalImage=document.querySelector("#modalImage"), modalCategory=document.querySelector("#modalCategory"), modalTitle=document.querySelector("#modalTitle"), modalDescription=document.querySelector("#modalDescription"), modalPrice=document.querySelector("#modalPrice");
+const modal=document.querySelector("#dishModal"),
+  modalImage=document.querySelector("#modalImage"),
+  modalCategory=document.querySelector("#modalCategory"),
+  modalTitle=document.querySelector("#modalTitle"),
+  modalDescription=document.querySelector("#modalDescription"),
+  modalPrice=document.querySelector("#modalPrice");
+
+let currentDishIndexV29 = null;
+
 function openDish(index){
+  currentDishIndexV29 = index;
   const d=dishes[index];
+  if(!d)return;
   const sv=(typeof dishSv!=="undefined"&&dishSv[d[1]])||null;
-  const title=currentLanguage==="sv"&&sv?sv[0]:d[1];
-  const desc=currentLanguage==="sv"&&sv?sv[1]:d[2];
-  const cat=currentLanguage==="sv"&&typeof categorySv!=="undefined"?(categorySv[d[0]]||d[0]):d[0];
+  const lang=(typeof currentLanguage!=="undefined" ? currentLanguage : "sv");
+  const title=lang==="sv"&&sv?sv[0]:d[1];
+  const desc=lang==="sv"&&sv?sv[1]:d[2];
+  const cat=lang==="sv"&&typeof categorySv!=="undefined"?(categorySv[d[0]]||d[0]):d[0];
   modalImage.src=d[4];
   modalImage.alt=title;
   modalCategory.textContent=cat;
@@ -46,10 +85,51 @@ function openDish(index){
   modal.setAttribute("aria-hidden","false");
   document.body.classList.add("modalOpen");
 }
-function closeDish(){modal.classList.remove("show");modal.setAttribute("aria-hidden","true");document.body.classList.remove("modalOpen")}
-grid.addEventListener("click",e=>{const card=e.target.closest(".dish");if(card)openDish(Number(card.dataset.index))});
-grid.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("dish")){e.preventDefault();openDish(Number(e.target.dataset.index))}});
-document.querySelector("#modalClose").onclick=closeDish;modal.addEventListener("click",e=>{if(e.target===modal)closeDish()});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDish()});document.querySelector("#modalBook").addEventListener("click",closeDish);
+
+function closeDish(){
+  modal.classList.remove("show");
+  modal.setAttribute("aria-hidden","true");
+  document.body.classList.remove("modalOpen");
+}
+
+function goToReservation(){
+  if(currentDishIndexV29 !== null && dishes[currentDishIndexV29]){
+    setSelectedDishV29(dishes[currentDishIndexV29]);
+  }
+  closeDish();
+  const section=document.getElementById("reservation");
+  if(section)setTimeout(()=>section.scrollIntoView({behavior:"smooth",block:"start"}),50);
+}
+
+grid.addEventListener("click",e=>{
+  const button=e.target.closest("button[data-action]");
+  if(button){
+    e.stopPropagation();
+    const index=Number(button.dataset.index);
+    if(button.dataset.action==="details") openDish(index);
+    if(button.dataset.action==="book"){
+      setSelectedDishV29(dishes[index]);
+      const section=document.getElementById("reservation");
+      if(section)section.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+    return;
+  }
+  const card=e.target.closest(".dish");
+  if(card)openDish(Number(card.dataset.index));
+});
+
+grid.addEventListener("keydown",e=>{
+  if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("dish")){
+    e.preventDefault();
+    openDish(Number(e.target.dataset.index));
+  }
+});
+
+document.querySelector("#modalClose").addEventListener("click",closeDish);
+document.querySelector("#modalCloseSecondary").addEventListener("click",closeDish);
+document.querySelector("#modalReserveNow").addEventListener("click",goToReservation);
+modal.addEventListener("click",e=>{if(e.target===modal)closeDish()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modal.classList.contains("show"))closeDish()});
 
 const nav=document.querySelector(".nav");const toggle=document.querySelector("#toggle");toggle.onclick=()=>{const open=nav.classList.toggle("open");toggle.setAttribute("aria-expanded",open)};nav.querySelectorAll("nav a").forEach(a=>a.addEventListener("click",()=>{nav.classList.remove("open");toggle.setAttribute("aria-expanded","false")}));
 
@@ -71,7 +151,7 @@ const nav=document.querySelector(".nav");const toggle=document.querySelector("#t
   let reservationData=null;
 
   const T={
-    sv:{
+    sv:{"reservation.selectedDish":"Vald rätt","reservation.removeDish":"Ta bort","reservation.noDish":"Ingen vald rätt","menu.view":"Visa detaljer","menu.book":"Boka bord","menu.close":"Stäng","menu.priceLabel":"Pris","menu.servingLabel":"Servering","menu.servingValue":"Tillagas på beställning","menu.allergyLabel":"Allergier","menu.allergyValue":"Fråga gärna personalen",
       "top.open":"Öppet idag 11:00–23:00","top.call":"Ring +46 08 123 45 67","nav.home":"Hem","nav.about":"Om oss","nav.menu":"Meny","nav.reservation":"Boka bord","nav.contact":"Kontakt","nav.book":"Boka ett bord",
       "hero.kicker":"VÄLKOMMEN TILL TEST RESTAURANT","hero.title":"God mat.<br><i>Härliga stunder.</i>","hero.text":"En modern matupplevelse där färska råvaror, varm service och minnesvärda smaker möts.","hero.explore":"Se menyn",
       "about.kicker":"VÅR HISTORIA","about.title":"En plats för <i>trevligt sällskap.</i>","about.p1":"Test Restaurant är ett modernt demokoncept som visar hur en professionell restaurangwebbplats kan se ut och fungera.","about.p2":"Kom för en avslappnad lunch, en speciell middag eller bara en god dessert. Varje detalj är utformad för en trevlig upplevelse.","about.mon":"Måndag <b>Stängt</b>","about.tueThu":"Tis–Tor <b>11:00–22:00</b>","about.fri":"<div class=\"hours-line\"><span>Fre–Lör</span><strong>11:00–23:00</strong></div>","about.sun":"<div class=\"hours-line\"><span>Söndag</span><strong>12:00–21:00</strong></div>","about.reserve":"Boka ditt bord →",
@@ -82,7 +162,7 @@ const nav=document.querySelector(".nav");const toggle=document.querySelector("#t
       "contact.kicker":"BESÖK OSS","contact.title":"Låt oss göra det <i>minnesvärt.</i>","footer.top":"Till toppen ↑",
       "email.prepared":"Ditt e-postprogram bör öppnas med bokningsuppgifterna ifyllda.","email.fallback":"Om inget händer: öppna ditt e-postprogram och skicka bokningsuppgifterna till","sms.prepared":"Din SMS-app bör öppnas med bokningsuppgifterna ifyllda.","copy.done":"Bokningsuppgifterna har kopierats.","copy.fail":"Kunde inte kopiera automatiskt. Markera och kopiera texten nedan.","subject":"Bokningsförfrågan","none":"Inga"
     },
-    en:{
+    en:{"reservation.selectedDish":"Selected dish","reservation.removeDish":"Remove","reservation.noDish":"No selected dish","menu.view":"View details","menu.book":"Book a table","menu.close":"Close","menu.priceLabel":"Price","menu.servingLabel":"Serving","menu.servingValue":"Prepared to order","menu.allergyLabel":"Allergies","menu.allergyValue":"Please ask our staff",
       "top.open":"Open today 11:00–23:00","top.call":"Call +46 08 123 45 67","nav.home":"Home","nav.about":"About","nav.menu":"Menu","nav.reservation":"Reservation","nav.contact":"Contact","nav.book":"Book a table",
       "hero.kicker":"WELCOME TO TEST RESTAURANT","hero.title":"Good food.<br><i>Great moments.</i>","hero.text":"A modern dining experience where fresh ingredients, warm hospitality and memorable flavors meet.","hero.explore":"Explore menu",
       "about.kicker":"OUR STORY","about.title":"A place made for <i>good company.</i>","about.p1":"Test Restaurant is a modern demo concept built to show how a professional restaurant website can look and work.","about.p2":"Come for a relaxed lunch, a special dinner or simply a great dessert. Every detail is designed around an enjoyable experience.","about.mon":"Monday <b>Closed</b>","about.tueThu":"Tue–Thu <b>11:00–22:00</b>","about.fri":"<div class=\"hours-line\"><span>Fri–Sat</span><strong>11:00–23:00</strong></div>","about.sun":"<div class=\"hours-line\"><span>Sunday</span><strong>12:00–21:00</strong></div>","about.reserve":"Reserve your table →",
@@ -1370,3 +1450,79 @@ grid.addEventListener("click",function(e){
 
   window.v27RefreshReservationCard=updateCard;
 })();
+
+
+// V29_SELECTED_DISH_CONNECTION
+let selectedDishV29 = null;
+
+function setSelectedDishV29(dish){
+  if(!dish){
+    selectedDishV29 = null;
+  }else{
+    const sv = (typeof dishSv!=="undefined" && dishSv[dish[1]]) || null;
+    selectedDishV29 = {
+      key: dish[1],
+      titleEn: dish[1],
+      titleSv: sv ? sv[0] : dish[1],
+      price: dish[3]
+    };
+  }
+  updateSelectedDishUIV29();
+}
+
+function selectedDishLabelV29(){
+  if(!selectedDishV29) return "";
+  const lang = (typeof currentLanguage!=="undefined" ? currentLanguage : "sv");
+  const title = lang==="sv" ? selectedDishV29.titleSv : selectedDishV29.titleEn;
+  return `${title} – ${selectedDishV29.price}`;
+}
+
+function updateSelectedDishUIV29(){
+  const box = document.getElementById("selectedDishBox");
+  const text = document.getElementById("selectedDishText");
+  const reviewRow = document.getElementById("reviewSelectedDishRow");
+  const reviewText = document.getElementById("reviewSelectedDish");
+
+  if(selectedDishV29){
+    const label = selectedDishLabelV29();
+    if(box) box.hidden = false;
+    if(text) text.textContent = label;
+    if(reviewRow) reviewRow.hidden = false;
+    if(reviewText) reviewText.textContent = label;
+  }else{
+    if(box) box.hidden = true;
+    if(text) text.textContent = "";
+    if(reviewRow) reviewRow.hidden = true;
+    if(reviewText) reviewText.textContent = "";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const clearBtn = document.getElementById("clearSelectedDish");
+  if(clearBtn){
+    clearBtn.addEventListener("click", () => setSelectedDishV29(null));
+  }
+
+  // Keep selected dish text synchronized when language changes.
+  document.querySelectorAll("[data-lang]").forEach(btn => {
+    btn.addEventListener("click", () => setTimeout(updateSelectedDishUIV29, 0));
+  });
+});
+
+
+function selectedDishLineV29(){
+  if(!selectedDishV29) return "";
+  const lang = (typeof currentLanguage!=="undefined" ? currentLanguage : "sv");
+  return `${lang==="sv" ? "Vald rätt" : "Selected dish"}: ${selectedDishLabelV29()}`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const reservationFormV29 = document.querySelector("#reservation form") || document.querySelector("form");
+  if(reservationFormV29){
+    reservationFormV29.addEventListener("submit", () => {
+      setTimeout(() => {
+        updateSelectedDishUIV29(); // review sync
+      }, 0);
+    });
+  }
+});

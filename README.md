@@ -192,3 +192,26 @@ Version 7 is based on the tested Version 6.
 - Dish detail popup follows the selected language.
 - Added allergy/menu information and updated Chef's Pick.
 - Existing reservation functionality from Version 27 is preserved.
+
+
+## Version 29 CLEAN
+Built again from the stable Version 28 baseline.
+
+Every dish card now has two visible buttons:
+- Visa detaljer / View details
+- Boka bord / Book a table
+
+The detail popup shows text/details first and a smaller image area, so the information and booking button are visible immediately without needing to scroll.
+
+
+## V29 – Menu to Reservation connection
+- When a customer clicks "Boka bord / Book a table" from a dish card or dish detail popup, that dish is remembered.
+- The reservation form shows "Vald rätt / Selected dish" with the dish name and price.
+- The customer can remove the selected dish before sending.
+- The reservation review also shows the selected dish.
+- The selected dish text follows the current Swedish/English language.
+- This is a reservation preference, not a confirmed food order.
+
+
+## V29 selected dish confirmation placement
+The selected dish now appears inside the confirmation summary with Date, Time, Guests and Reservation number. It is no longer displayed after the language selector.

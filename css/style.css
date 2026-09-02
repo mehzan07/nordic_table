@@ -358,3 +358,95 @@
 .dish>div:last-child{padding-top:2px}
 .dish h3{margin-bottom:7px}
 @media(max-width:700px){.menuMeta{justify-content:center;text-align:center}}
+
+
+/* V29 clean – explicit dish actions and visible detail popup */
+.dish{cursor:default}
+.dishContent{padding:18px!important}
+.dishMeta{padding:0!important;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.dishMeta .price{float:none}
+.dishActions{padding:16px 0 0!important;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dishDetailsBtn,.dishBookBtn{
+  min-height:42px;border-radius:8px;padding:10px 12px;font:700 12px/1 var(--sans);
+  cursor:pointer;transition:.18s
+}
+.dishDetailsBtn{background:transparent;border:1px solid var(--ink);color:var(--ink)}
+.dishBookBtn{background:var(--ink);border:1px solid var(--ink);color:#fff}
+.dishDetailsBtn:hover,.dishBookBtn:hover{transform:translateY(-1px)}
+.viewDish{display:none!important}
+
+.modalCardV29{
+  width:min(920px,calc(100vw - 32px))!important;
+  max-height:calc(100vh - 32px)!important;
+  overflow:auto!important;
+  grid-template-columns:1.15fr .85fr!important
+}
+.modalBodyV29{padding:38px 36px!important;align-self:start!important}
+.modalCardV29>img{
+  width:100%!important;height:100%!important;min-height:520px!important;object-fit:cover!important
+}
+.modalFacts{
+  margin:20px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden
+}
+.modalFacts>div{
+  display:grid;grid-template-columns:110px 1fr;gap:14px;padding:12px 14px;border-bottom:1px solid var(--line)
+}
+.modalFacts>div:last-child{border-bottom:0}
+.modalFacts span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.modalFacts strong{display:block!important;margin:0!important;font:700 14px/1.4 var(--sans)!important}
+.modalActionsV29{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.modalReserveNow,.modalCloseSecondary{min-height:46px;border-radius:8px;cursor:pointer;font-weight:800}
+.modalReserveNow{border:0}
+.modalCloseSecondary{background:transparent;border:1px solid var(--ink);color:var(--ink)}
+
+@media(max-width:800px){
+  .modalCardV29{grid-template-columns:1fr!important}
+  .modalBodyV29{order:1;padding:26px 22px!important}
+  .modalCardV29>img{order:2;height:220px!important;min-height:220px!important}
+  .modalActionsV29{grid-template-columns:1fr}
+  .dishActions{grid-template-columns:1fr}
+}
+
+
+/* V29 selected dish connection */
+.selectedDishBox{
+  margin:16px 0;
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:12px;
+  align-items:center;
+}
+.selectedDishBox[hidden]{display:none!important}
+.selectedDishLabel{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+}
+#selectedDishText{font-size:14px}
+.clearSelectedDish{
+  border:0;
+  background:transparent;
+  text-decoration:underline;
+  cursor:pointer;
+  font-weight:700;
+}
+.reviewSelectedDishRow[hidden]{display:none!important}
+@media(max-width:620px){
+  .selectedDishBox{grid-template-columns:1fr}
+  .clearSelectedDish{justify-self:start}
+}
+
+
+/* V29 – selected dish belongs inside confirmation */
+.reservation-ready-grid .reviewSelectedDishRow{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.reservation-ready-grid .reviewSelectedDishRow[hidden]{
+  display:none!important;
+}

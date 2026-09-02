@@ -18,7 +18,26 @@
 
 <section class="section white" id="menu"><div class="heading"><small data-i18n="menu.kicker">FROM OUR KITCHEN</small><h2 data-i18n="menu.title">Explore our <i>menu</i></h2><p data-i18n="menu.text">Freshly prepared favorites, from small plates to indulgent desserts.</p></div><div class="menuTools"><div class="filters" id="filters"></div><label class="menuSearch"><span data-i18n="menu.searchLabel">Search dishes</span><input id="menuSearch" type="search" placeholder="Try salmon, pasta, dessert…" autocomplete="off"></label></div><div class="menuMeta"><span data-i18n="menu.meta">16 dishes · prices in SEK</span><span data-i18n="menu.allergy">Ask our staff about allergies and dietary requirements.</span></div><div class="grid" id="menuGrid"></div><p class="menuHint" data-i18n="menu.hint">Click a dish to see more details.</p></section>
 
-<div class="modal" id="dishModal" aria-hidden="true"><div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="modalClose" id="modalClose" aria-label="Close">×</button><img id="modalImage" src="" alt=""><div class="modalBody"><small id="modalCategory"></small><h2 id="modalTitle"></h2><p id="modalDescription"></p><strong id="modalPrice"></strong><a class="btn" href="#reservation" id="modalBook">Book a table →</a></div></div></div>
+<div class="modal" id="dishModal" aria-hidden="true">
+  <div class="modalCard modalCardV29" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="modalClose" id="modalClose" aria-label="Close">×</button>
+    <div class="modalBody modalBodyV29">
+      <small id="modalCategory"></small>
+      <h2 id="modalTitle"></h2>
+      <p id="modalDescription"></p>
+      <div class="modalFacts">
+        <div><span data-i18n="menu.priceLabel">Pris</span><strong id="modalPrice"></strong></div>
+        <div><span data-i18n="menu.servingLabel">Servering</span><strong data-i18n="menu.servingValue">Tillagas på beställning</strong></div>
+        <div><span data-i18n="menu.allergyLabel">Allergier</span><strong data-i18n="menu.allergyValue">Fråga gärna personalen</strong></div>
+      </div>
+      <div class="modalActionsV29">
+        <button type="button" id="modalReserveNow" class="btn modalReserveNow" data-i18n="menu.book">Boka bord</button>
+        <button type="button" id="modalCloseSecondary" class="modalCloseSecondary" data-i18n="menu.close">Stäng</button>
+      </div>
+    </div>
+    <img id="modalImage" src="" alt="">
+  </div>
+</div>
 
 <section class="feature"><div><small data-i18n="chef.kicker">CHEF'S PICK</small><h2 data-i18n="chef.title">Beef tenderloin with potato gratin</h2><p data-i18n="chef.text">Swedish beef tenderloin, creamy potato gratin, red-wine sauce and roasted vegetables.</p></div><strong>329 kr</strong></section>
 
@@ -33,7 +52,14 @@
     <span aria-hidden="true">|</span>
     <button type="button" class="reservation-lang-action" data-v12-lang="en" style="display:inline-block;visibility:visible;opacity:1;background:transparent;border:0;cursor:pointer;padding:2px 0;color:inherit">English</button>
   </div>
-</div><div class="form-grid"><label><span data-i18n="res.name">Full name *</span><input id="guestName" name="name" type="text" autocomplete="name" placeholder="Your name" data-i18n-placeholder="res.namePlaceholder" required></label><label><span data-i18n="res.phone">Phone *</span><input id="guestPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+46 ..." data-i18n-placeholder="res.phonePlaceholder" required maxlength="20"></label><label><span data-i18n="res.email">Email *</span><input id="guestEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" data-i18n-placeholder="res.emailPlaceholder" required maxlength="254" inputmode="email"></label><label><span data-i18n="res.guests">Guests *</span><select id="guestCount" name="guests" required><option value="" data-i18n="res.select">Select</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></label><label><span data-i18n="res.date">Date *</span><input id="reservationDate" name="date" type="date" required></label><label><span data-i18n="res.time">Time *</span><select id="reservationTime" name="time" required><option value="" data-i18n="res.select">Select</option><option>11:30</option><option>12:30</option><option>13:30</option><option>17:30</option><option>18:30</option><option>19:30</option><option>20:30</option><option>21:30</option></select><small id="timeAvailabilityHint" class="time-availability-hint" aria-live="polite"></small></label></div><label class="full-field"><span data-i18n="res.requests">Special requests</span><textarea id="specialRequests" name="requests" rows="4" placeholder="Birthday, allergies, high chair, window table..." data-i18n-placeholder="res.requestPlaceholder"></textarea></label><div class="reservation-note"><strong data-i18n="res.demo">Demo reservation</strong><span data-i18n="res.note">No reservation is stored online in this version. You will review the details before sending.</span></div><div id="validationMessage" class="validation-message" hidden role="alert" aria-live="polite"></div><button class="primary-btn" data-i18n="res.review" type="submit">Review reservation →</button></form><div id="reservationReview" class="reservation-review" hidden>
+</div><div class="form-grid"><label><span data-i18n="res.name">Full name *</span><input id="guestName" name="name" type="text" autocomplete="name" placeholder="Your name" data-i18n-placeholder="res.namePlaceholder" required></label><label><span data-i18n="res.phone">Phone *</span><input id="guestPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+46 ..." data-i18n-placeholder="res.phonePlaceholder" required maxlength="20"></label><label><span data-i18n="res.email">Email *</span><input id="guestEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" data-i18n-placeholder="res.emailPlaceholder" required maxlength="254" inputmode="email"></label><label><span data-i18n="res.guests">Guests *</span><select id="guestCount" name="guests" required><option value="" data-i18n="res.select">Select</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></label><label><span data-i18n="res.date">Date *</span><input id="reservationDate" name="date" type="date" required></label><label><span data-i18n="res.time">Time *</span><select id="reservationTime" name="time" required><option value="" data-i18n="res.select">Select</option><option>11:30</option><option>12:30</option><option>13:30</option><option>17:30</option><option>18:30</option><option>19:30</option><option>20:30</option><option>21:30</option></select><small id="timeAvailabilityHint" class="time-availability-hint" aria-live="polite"></small></label></div><label class="full-field"><span data-i18n="res.requests">Special requests</span><textarea id="specialRequests" name="requests" rows="4" placeholder="Birthday, allergies, high chair, window table..." data-i18n-placeholder="res.requestPlaceholder"></textarea></label><div class="reservation-note"><strong data-i18n="res.demo">Demo reservation</strong><span data-i18n="res.note">No reservation is stored online in this version. You will review the details before sending.</span></div><div id="validationMessage" class="validation-message" hidden role="alert" aria-live="polite"></div><button class="primary-btn" data-i18n="res.review" type="submit">Review reservation →</button>
+<div id="selectedDishBox" class="selectedDishBox" hidden>
+  <span class="selectedDishLabel" data-i18n="reservation.selectedDish">Vald rätt</span>
+  <strong id="selectedDishText"></strong>
+  <button id="clearSelectedDish" type="button" class="clearSelectedDish" data-i18n="reservation.removeDish">Ta bort</button>
+</div>
+
+</form><div id="reservationReview" class="reservation-review" hidden>
 <div id="reservationReadyCard" class="reservation-ready-card" hidden>
   <div class="reservation-ready-icon" aria-hidden="true">✓</div>
   <div class="reservation-ready-content">
@@ -43,6 +69,10 @@
       <div><span id="readyDateLabel">Datum</span><strong id="readyDateValue">—</strong></div>
       <div><span id="readyTimeLabel">Tid</span><strong id="readyTimeValue">—</strong></div>
       <div><span id="readyGuestsLabel">Gäster</span><strong id="readyGuestsValue">—</strong></div>
+      <div class="reviewSelectedDishRow" id="reviewSelectedDishRow" hidden>
+        <span data-i18n="reservation.selectedDish">Vald rätt</span>
+        <strong id="reviewSelectedDish"></strong>
+      </div>
       <div><span id="readyRefLabel">Bokningsnummer</span><strong id="readyRefValue">—</strong></div>
     </div>
   </div>
@@ -54,8 +84,8 @@
     <button type="button" class="reservation-lang-action" data-v12-lang="sv" style="display:inline-block;visibility:visible;opacity:1;background:transparent;border:0;cursor:pointer;padding:2px 0;color:inherit">Svenska</button>
     <span aria-hidden="true">|</span>
     <button type="button" class="reservation-lang-action" data-v12-lang="en" style="display:inline-block;visibility:visible;opacity:1;background:transparent;border:0;cursor:pointer;padding:2px 0;color:inherit">English</button>
-  </div>
+</div>
 </div><div class="review-icon">✓</div><span class="eyebrow" data-i18n="review.kicker">CHECK YOUR DETAILS</span><h3 data-i18n="review.title">Your reservation</h3><div id="reservationReference" class="reservation-reference" hidden></div><div id="reviewDetails" class="review-details"></div><div class="review-actions"><button id="editReservation" class="secondary-btn" data-i18n="review.edit" type="button">Edit</button><button id="sendReservation" class="primary-btn" data-i18n="review.email" type="button">Send by email →</button><button id="sendSms" class="secondary-btn" data-i18n="review.sms" type="button">Send by SMS →</button><button id="copyReservation" class="secondary-btn" data-i18n="review.copy" type="button">Copy details</button><button id="newReservation" class="secondary-btn" type="button">Ny bokning</button></div><p id="reservationSent" class="form-message success" hidden></p><p id="communicationHelp" class="communication-help" hidden></p></div></div></section><section class="section dark" id="contact"><div class="contact"><div><small data-i18n="contact.kicker">COME VISIT</small><h2 data-i18n="contact.title">Let's make it <i>memorable.</i></h2><p>Example Street 12<br>111 22 Stockholm, Sweden</p><p><a href="tel:+46081234567">+46 08 123 45 67</a><br><a href="mailto:reservations@testrestaurant.se">reservations@testrestaurant.se</a></p></div><div class="map"><b>●</b><span>Test Restaurant<br>Example Street 12, Stockholm</span><a href="https://www.google.com/maps/search/?api=1&query=Stockholm" target="_blank">Open in Google Maps ↗</a></div></div></section>
-<footer><span>TR&nbsp; Test Restaurant</span><span>© 2026 Test Restaurant · Modern dining demo</span><a data-i18n="footer.top" href="#home">Back to top ↑</a></footer>
+<footer><span>TR&nbsp; Test Restaurant</span><span>© 2026 Test Restaurant · Modern dining demo</span><a data-i18n="footer.top" href="#home">Back to top ↑</a><small style="display:block;text-align:center;opacity:.45;padding:8px">V29 CLEAN</small></footer>
 <script src="js/app.js"></script>
 </body></html>
