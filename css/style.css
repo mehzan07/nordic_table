@@ -351,3 +351,10 @@
     grid-template-columns:1fr;
   }
 }
+
+/* V28 improved menu */
+.menuMeta{max-width:1140px;margin:15px auto 24px;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+.menuMeta span:first-child{font-weight:700;color:var(--ink)}
+.dish>div:last-child{padding-top:2px}
+.dish h3{margin-bottom:7px}
+@media(max-width:700px){.menuMeta{justify-content:center;text-align:center}}

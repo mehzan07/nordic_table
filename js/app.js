@@ -1,17 +1,20 @@
 const dishes=[
-["Starters","Burrata & Tomatoes","Creamy burrata, heirloom tomatoes, basil oil and sea salt.","119 kr","https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=700&q=80"],
-["Starters","Crispy Calamari","Golden calamari, lemon, herbs and smoked aioli.","129 kr","https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=700&q=80"],
-["Main","Grilled Salmon","Charred salmon, roasted vegetables and lemon butter.","229 kr","https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=700&q=80"],
-["Main","Herb Chicken","Roasted chicken breast, parmesan potatoes and jus.","199 kr","https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=700&q=80"],
-["Pizza","Truffle Margherita","Tomato, mozzarella, basil and a touch of truffle oil.","179 kr","https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=700&q=80"],
-["Pizza","Prosciutto & Rocket","Prosciutto, mozzarella, rocket and shaved parmesan.","189 kr","https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=700&q=80"],
-["Pasta","Truffle Mushroom Pasta","Tagliatelle, roasted mushrooms, parmesan and truffle cream.","189 kr","https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=700&q=80"],
-["Pasta","Spaghetti Pomodoro","Slow-cooked tomato, garlic, basil and aged parmesan.","159 kr","https://images.unsplash.com/photo-1556761223-4c4282c73f77?auto=format&fit=crop&w=700&q=80"],
-["Burgers","Classic House Burger","Beef patty, cheddar, lettuce, tomato and house sauce.","179 kr","https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80"],
-["Burgers","Crispy Chicken Burger","Crispy chicken, slaw, pickles and spicy mayo.","169 kr","https://images.unsplash.com/photo-1606755962773-d324e0a13086?auto=format&fit=crop&w=700&q=80"],
-["Desserts","Tiramisu","Espresso-soaked mascarpone, cocoa and soft sponge.","89 kr","https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=700&q=80"],
-["Desserts","Chocolate Fondant","Warm chocolate cake, vanilla ice cream and berries.","99 kr","https://images.unsplash.com/photo-1606313564200-e75d5e30476b?auto=format&fit=crop&w=700&q=80"],
-["Drinks","Fresh Lemonade","Fresh lemon, mint and sparkling water.","49 kr","https://images.unsplash.com/photo-1621263764928-df1444c5b8e4?auto=format&fit=crop&w=700&q=80"]
+["Starters","Toast Skagen","Hand-peeled prawns, dill, lemon, horseradish and toasted sourdough.","145 kr","https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=700&q=80"],
+["Starters","Burrata & Tomatoes","Creamy burrata, tomatoes, basil oil, toasted seeds and sea salt.","139 kr","https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=700&q=80"],
+["Starters","Crispy Calamari","Golden calamari, lemon, parsley and smoked garlic aioli.","135 kr","https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=700&q=80"],
+["Main","Grilled Salmon","Grilled salmon, crushed potatoes, seasonal greens and lemon butter.","249 kr","https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=700&q=80"],
+["Main","Beef Tenderloin","Swedish beef tenderloin, potato gratin, red-wine sauce and roasted vegetables.","329 kr","https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80"],
+["Main","Herb Chicken","Herb-roasted chicken breast, parmesan potatoes, green beans and natural jus.","219 kr","https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=700&q=80"],
+["Pasta","Truffle Mushroom Pasta","Tagliatelle, roasted mushrooms, parmesan, herbs and truffle cream.","219 kr","https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=700&q=80"],
+["Pasta","Prawn Linguine","Linguine, prawns, cherry tomatoes, garlic, chili, parsley and lemon.","239 kr","https://images.unsplash.com/photo-1556761223-4c4282c73f77?auto=format&fit=crop&w=700&q=80"],
+["Vegetarian","Roasted Cauliflower","Roasted cauliflower, herb lentils, tahini, pomegranate and toasted almonds.","199 kr","https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=700&q=80"],
+["Vegetarian","Wild Mushroom Risotto","Creamy risotto, wild mushrooms, aged cheese, herbs and crispy shallots.","209 kr","https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&w=700&q=80"],
+["Burgers","Classic House Burger","Swedish beef, cheddar, lettuce, tomato, pickles and house dressing with fries.","199 kr","https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80"],
+["Desserts","Crème Brûlée","Classic vanilla crème brûlée with caramelized sugar and fresh berries.","109 kr","https://images.unsplash.com/photo-1470324161839-ce2bb6fa6bc3?auto=format&fit=crop&w=700&q=80"],
+["Desserts","Chocolate Fondant","Warm chocolate fondant, vanilla ice cream and seasonal berries.","119 kr","https://images.unsplash.com/photo-1606313564200-e75d5e30476b?auto=format&fit=crop&w=700&q=80"],
+["Desserts","Tiramisu","Espresso-soaked sponge, mascarpone cream and cocoa.","105 kr","https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=700&q=80"],
+["Drinks","Fresh Lemonade","Fresh lemon, mint, sparkling water and a touch of honey.","55 kr","https://images.unsplash.com/photo-1621263764928-df1444c5b8e4?auto=format&fit=crop&w=700&q=80"],
+["Drinks","Sparkling Elderflower","Elderflower, lime, mint and sparkling water.","59 kr","https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=700&q=80"]
 ];
 const grid=document.querySelector("#menuGrid"), filters=document.querySelector("#filters"), search=document.querySelector("#menuSearch");
 const cats=["All",...new Set(dishes.map(x=>x[0]))];
@@ -27,7 +30,22 @@ filters.addEventListener("click",e=>{if(e.target.tagName!=="BUTTON")return;filte
 search.addEventListener("input",()=>{currentQuery=search.value;render()});
 
 const modal=document.querySelector("#dishModal"), modalImage=document.querySelector("#modalImage"), modalCategory=document.querySelector("#modalCategory"), modalTitle=document.querySelector("#modalTitle"), modalDescription=document.querySelector("#modalDescription"), modalPrice=document.querySelector("#modalPrice");
-function openDish(index){const d=dishes[index];modalImage.src=d[4];modalImage.alt=d[1];modalCategory.textContent=d[0];modalTitle.textContent=d[1];modalDescription.textContent=d[2];modalPrice.textContent=d[3];modal.classList.add("show");modal.setAttribute("aria-hidden","false");document.body.classList.add("modalOpen")}
+function openDish(index){
+  const d=dishes[index];
+  const sv=(typeof dishSv!=="undefined"&&dishSv[d[1]])||null;
+  const title=currentLanguage==="sv"&&sv?sv[0]:d[1];
+  const desc=currentLanguage==="sv"&&sv?sv[1]:d[2];
+  const cat=currentLanguage==="sv"&&typeof categorySv!=="undefined"?(categorySv[d[0]]||d[0]):d[0];
+  modalImage.src=d[4];
+  modalImage.alt=title;
+  modalCategory.textContent=cat;
+  modalTitle.textContent=title;
+  modalDescription.textContent=desc;
+  modalPrice.textContent=d[3];
+  modal.classList.add("show");
+  modal.setAttribute("aria-hidden","false");
+  document.body.classList.add("modalOpen");
+}
 function closeDish(){modal.classList.remove("show");modal.setAttribute("aria-hidden","true");document.body.classList.remove("modalOpen")}
 grid.addEventListener("click",e=>{const card=e.target.closest(".dish");if(card)openDish(Number(card.dataset.index))});
 grid.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("dish")){e.preventDefault();openDish(Number(e.target.dataset.index))}});
@@ -57,8 +75,8 @@ const nav=document.querySelector(".nav");const toggle=document.querySelector("#t
       "top.open":"Öppet idag 11:00–23:00","top.call":"Ring +46 08 123 45 67","nav.home":"Hem","nav.about":"Om oss","nav.menu":"Meny","nav.reservation":"Boka bord","nav.contact":"Kontakt","nav.book":"Boka ett bord",
       "hero.kicker":"VÄLKOMMEN TILL TEST RESTAURANT","hero.title":"God mat.<br><i>Härliga stunder.</i>","hero.text":"En modern matupplevelse där färska råvaror, varm service och minnesvärda smaker möts.","hero.explore":"Se menyn",
       "about.kicker":"VÅR HISTORIA","about.title":"En plats för <i>trevligt sällskap.</i>","about.p1":"Test Restaurant är ett modernt demokoncept som visar hur en professionell restaurangwebbplats kan se ut och fungera.","about.p2":"Kom för en avslappnad lunch, en speciell middag eller bara en god dessert. Varje detalj är utformad för en trevlig upplevelse.","about.mon":"Måndag <b>Stängt</b>","about.tueThu":"Tis–Tor <b>11:00–22:00</b>","about.fri":"<div class=\"hours-line\"><span>Fre–Lör</span><strong>11:00–23:00</strong></div>","about.sun":"<div class=\"hours-line\"><span>Söndag</span><strong>12:00–21:00</strong></div>","about.reserve":"Boka ditt bord →",
-      "menu.kicker":"FRÅN VÅRT KÖK","menu.title":"Utforska vår <i>meny</i>","menu.text":"Nylagade favoriter, från smårätter till härliga desserter.","menu.searchLabel":"Sök rätter","menu.hint":"Klicka på en rätt för mer information.","menu.searchPlaceholder":"Prova lax, pasta, dessert…",
-      "chef.kicker":"KOCKENS VAL","chef.title":"Tryffelpasta med svamp","chef.text":"Silkeslen tagliatelle, rostade svampar, parmesan och tryffelgrädde.",
+      "menu.kicker":"FRÅN VÅRT KÖK","menu.title":"Utforska vår <i>meny</i>","menu.text":"Nylagade favoriter, från smårätter till härliga desserter.","menu.searchLabel":"Sök rätter","menu.hint":"Klicka på en rätt för mer information.","menu.searchPlaceholder":"Prova lax, pasta, dessert…","menu.meta":"16 rätter · priser i SEK","menu.allergy":"Fråga gärna personalen om allergier och specialkost.",
+      "chef.kicker":"KOCKENS VAL","chef.title":"Oxfilé med potatisgratäng","chef.text":"Svensk oxfilé, krämig potatisgratäng, rödvinssås och rostade grönsaker.",
       "res.kicker":"BOKA BORD","res.title":"Boka ditt bord","res.text":"Välj datum, tid och antal gäster och granska sedan din bokning innan du skickar den.","res.name":"Namn *","res.phone":"Telefon *","res.email":"E-post *","res.guests":"Antal gäster *","res.date":"Datum *","res.time":"Tid *","res.requests":"Särskilda önskemål","res.select":"Välj","res.namePlaceholder":"Ditt namn","res.phonePlaceholder":"+46 ...","res.emailPlaceholder":"du@example.com","res.requestPlaceholder":"Födelsedag, allergier, barnstol, fönsterplats...","res.demo":"Demobokning","res.note":"Ingen bokning sparas online i denna version. Du granskar uppgifterna innan de skickas.","res.review":"Granska bokning →",
       "review.kicker":"KONTROLLERA DINA UPPGIFTER","review.title":"Din bokning","review.edit":"Ändra","review.email":"Skicka via e-post →","review.sms":"Skicka via SMS →","review.copy":"Kopiera uppgifter",
       "contact.kicker":"BESÖK OSS","contact.title":"Låt oss göra det <i>minnesvärt.</i>","footer.top":"Till toppen ↑",
@@ -68,8 +86,8 @@ const nav=document.querySelector(".nav");const toggle=document.querySelector("#t
       "top.open":"Open today 11:00–23:00","top.call":"Call +46 08 123 45 67","nav.home":"Home","nav.about":"About","nav.menu":"Menu","nav.reservation":"Reservation","nav.contact":"Contact","nav.book":"Book a table",
       "hero.kicker":"WELCOME TO TEST RESTAURANT","hero.title":"Good food.<br><i>Great moments.</i>","hero.text":"A modern dining experience where fresh ingredients, warm hospitality and memorable flavors meet.","hero.explore":"Explore menu",
       "about.kicker":"OUR STORY","about.title":"A place made for <i>good company.</i>","about.p1":"Test Restaurant is a modern demo concept built to show how a professional restaurant website can look and work.","about.p2":"Come for a relaxed lunch, a special dinner or simply a great dessert. Every detail is designed around an enjoyable experience.","about.mon":"Monday <b>Closed</b>","about.tueThu":"Tue–Thu <b>11:00–22:00</b>","about.fri":"<div class=\"hours-line\"><span>Fri–Sat</span><strong>11:00–23:00</strong></div>","about.sun":"<div class=\"hours-line\"><span>Sunday</span><strong>12:00–21:00</strong></div>","about.reserve":"Reserve your table →",
-      "menu.kicker":"FROM OUR KITCHEN","menu.title":"Explore our <i>menu</i>","menu.text":"Freshly prepared favorites, from small plates to indulgent desserts.","menu.searchLabel":"Search dishes","menu.hint":"Click a dish to see more details.","menu.searchPlaceholder":"Try salmon, pasta, dessert…",
-      "chef.kicker":"CHEF'S PICK","chef.title":"Truffle mushroom pasta","chef.text":"Silky tagliatelle, roasted mushrooms, parmesan and truffle cream.",
+      "menu.kicker":"FROM OUR KITCHEN","menu.title":"Explore our <i>menu</i>","menu.text":"Freshly prepared favorites, from small plates to indulgent desserts.","menu.searchLabel":"Search dishes","menu.hint":"Click a dish to see more details.","menu.searchPlaceholder":"Try salmon, pasta, dessert…","menu.meta":"16 dishes · prices in SEK","menu.allergy":"Ask our staff about allergies and dietary requirements.",
+      "chef.kicker":"CHEF'S PICK","chef.title":"Beef tenderloin with potato gratin","chef.text":"Swedish beef tenderloin, creamy potato gratin, red-wine sauce and roasted vegetables.",
       "res.kicker":"RESERVATIONS","res.title":"Reserve your table","res.text":"Choose your date, time and party size, then review your request before sending it.","res.name":"Full name *","res.phone":"Phone *","res.email":"Email *","res.guests":"Guests *","res.date":"Date *","res.time":"Time *","res.requests":"Special requests","res.select":"Select","res.namePlaceholder":"Your name","res.phonePlaceholder":"+46 ...","res.emailPlaceholder":"you@example.com","res.requestPlaceholder":"Birthday, allergies, high chair, window table...","res.demo":"Demo reservation","res.note":"No reservation is stored online in this version. You will review the details before sending.","res.review":"Review reservation →",
       "review.kicker":"CHECK YOUR DETAILS","review.title":"Your reservation","review.edit":"Edit","review.email":"Send by email →","review.sms":"Send by SMS →","review.copy":"Copy details",
       "contact.kicker":"COME VISIT","contact.title":"Let's make it <i>memorable.</i>","footer.top":"Back to top ↑",
@@ -77,9 +95,24 @@ const nav=document.querySelector(".nav");const toggle=document.querySelector("#t
     }
   };
 
-  const categorySv={Starters:"Förrätter",Main:"Huvudrätter",Pizza:"Pizza",Pasta:"Pasta",Burgers:"Burgare",Desserts:"Desserter",Drinks:"Dryck"};
+  const categorySv={Starters:"Förrätter",Main:"Huvudrätter",Pasta:"Pasta",Vegetarian:"Vegetariskt",Burgers:"Burgare",Desserts:"Desserter",Drinks:"Dryck"};
   const dishSv={
-    "Burrata & Tomatoes":["Burrata & tomater","Krämig burrata, tomater, basilikaolja och havssalt."],"Crispy Calamari":["Krispig bläckfisk","Friterad bläckfisk, citron, örter och rökt aioli."],"Grilled Salmon":["Grillad lax","Grillad lax, rostade grönsaker och citronsmör."],"Herb Chicken":["Örtkyckling","Rostat kycklingbröst, parmesanpotatis och sky."],"Truffle Margherita":["Tryffelmargherita","Tomat, mozzarella, basilika och lite tryffelolja."],"Prosciutto & Rocket":["Prosciutto & ruccola","Prosciutto, mozzarella, ruccola och hyvlad parmesan."],"Truffle Mushroom Pasta":["Tryffelpasta med svamp","Tagliatelle, rostade svampar, parmesan och tryffelgrädde."],"Spaghetti Pomodoro":["Spaghetti pomodoro","Långkokt tomat, vitlök, basilika och lagrad parmesan."],"Classic House Burger":["Klassisk husets burgare","Nötfärsbiff, cheddar, sallad, tomat och husets sås."],"Crispy Chicken Burger":["Krispig kycklingburgare","Krispig kyckling, coleslaw, pickles och stark majonnäs."],"Tiramisu":["Tiramisu","Espressodoppad mascarpone, kakao och mjuk sockerkaka."],"Chocolate Fondant":["Chokladfondant","Varm chokladkaka, vaniljglass och bär."],"Fresh Lemonade":["Färsk lemonad","Färsk citron, mynta och kolsyrat vatten."]
+    "Toast Skagen":["Toast Skagen","Handskalade räkor, dill, citron, pepparrot och rostat surdegsbröd."],
+    "Burrata & Tomatoes":["Burrata & tomater","Krämig burrata, tomater, basilikaolja, rostade frön och havssalt."],
+    "Crispy Calamari":["Krispig bläckfisk","Krispig bläckfisk, citron, persilja och rökt vitlöksaioli."],
+    "Grilled Salmon":["Grillad lax","Grillad lax, krossad potatis, säsongens grönt och citronsmör."],
+    "Beef Tenderloin":["Oxfilé","Svensk oxfilé, potatisgratäng, rödvinssås och rostade grönsaker."],
+    "Herb Chicken":["Örtrostad kyckling","Örtrostad kycklingfilé, parmesanpotatis, haricots verts och sky."],
+    "Truffle Mushroom Pasta":["Tryffelpasta med svamp","Tagliatelle, rostad svamp, parmesan, örter och tryffelgrädde."],
+    "Prawn Linguine":["Linguine med räkor","Linguine, räkor, körsbärstomater, vitlök, chili, persilja och citron."],
+    "Roasted Cauliflower":["Rostad blomkål","Rostad blomkål, örtlinser, tahini, granatäpple och rostade mandlar."],
+    "Wild Mushroom Risotto":["Svamprisotto","Krämig risotto, skogssvamp, lagrad ost, örter och krispig schalottenlök."],
+    "Classic House Burger":["Husets klassiska burgare","Svenskt nötkött, cheddar, sallad, tomat, pickles och husets dressing med pommes."],
+    "Crème Brûlée":["Crème brûlée","Klassisk vanilj-crème brûlée med karamelliserat socker och färska bär."],
+    "Chocolate Fondant":["Chokladfondant","Varm chokladfondant, vaniljglass och säsongens bär."],
+    "Tiramisu":["Tiramisu","Espressodränkt sockerkaka, mascarponekräm och kakao."],
+    "Fresh Lemonade":["Färsk lemonad","Färsk citron, mynta, kolsyrat vatten och en touch honung."],
+    "Sparkling Elderflower":["Fläder & bubbel","Fläder, lime, mynta och kolsyrat vatten."]
   };
 
   function tr(key){return (T[currentLanguage]&&T[currentLanguage][key])||T.en[key]||key;}
@@ -100,7 +133,11 @@ const nav=document.querySelector(".nav");const toggle=document.querySelector("#t
   const originalRender=render;
   render=function(){
     const q=currentQuery.trim().toLowerCase();
-    const items=dishes.filter(d=>(currentCat==="All"||d[0]===currentCat)&&(!q||`${d[1]} ${d[2]} ${d[0]}`.toLowerCase().includes(q)));
+    const items=dishes.filter(d=>{
+      const sv=dishSv[d[1]]||[];
+      const haystack=`${d[1]} ${d[2]} ${d[0]} ${sv[0]||""} ${sv[1]||""} ${categorySv[d[0]]||""}`.toLowerCase();
+      return (currentCat==="All"||d[0]===currentCat)&&(!q||haystack.includes(q));
+    });
     grid.innerHTML=items.length?items.map(d=>{
       const title=currentLanguage==="sv"?(dishSv[d[1]]?.[0]||d[1]):d[1];
       const desc=currentLanguage==="sv"?(dishSv[d[1]]?.[1]||d[2]):d[2];

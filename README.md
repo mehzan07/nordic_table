@@ -176,3 +176,19 @@ Version 7 is based on the tested Version 6.
 - Fixes the confirmation-card guest count so the selected number of guests is displayed.
 - Fixes the reservation number so only the code (for example TR-260901-4035) is shown.
 - All other Version 26 behavior is unchanged.
+
+
+## Version 28
+- Built from stable Version 27.
+- Prepared as the next development baseline for GitHub and VS Code work across computers.
+- Existing reservation confirmation, validation, opening hours, language switching, reservation times, email/SMS/copy, and reservation reference behavior are preserved.
+
+
+## Version 28 – Improved Menu
+- Expanded the demo menu to 16 dishes with realistic Swedish restaurant pricing.
+- Added a vegetarian category.
+- Added Swedish and English dish names and descriptions.
+- Search works with Swedish and English dish terms.
+- Dish detail popup follows the selected language.
+- Added allergy/menu information and updated Chef's Pick.
+- Existing reservation functionality from Version 27 is preserved.
