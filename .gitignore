@@ -10,3 +10,7 @@ reservations.db
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local secrets and generated email files
+.env
+email_outbox/

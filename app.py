@@ -9,6 +9,8 @@ from email.message import EmailMessage
 from functools import wraps
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from flask import (
     Flask,
     flash,
@@ -21,6 +23,7 @@ from flask import (
 )
 
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 DB_PATH = BASE_DIR / "reservations.db"
 OUTBOX_DIR = BASE_DIR / "email_outbox"
 
@@ -29,6 +32,7 @@ app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-me")
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "demo1234")
 MAX_GUESTS_PER_SLOT = int(os.getenv("MAX_GUESTS_PER_SLOT", "20"))
+EMAIL_MODE = os.getenv("EMAIL_MODE", "outbox").strip().lower()
 
 # Email configuration. If SMTP_HOST is empty, Backend V3 stores emails locally
 # in email_outbox/ so the complete workflow can be tested without an email account.
@@ -221,7 +225,9 @@ def admin_required(view_func):
 
 
 def email_mode() -> str:
-    return "smtp" if SMTP_HOST else "local_outbox"
+    if EMAIL_MODE == "smtp":
+        return "smtp"
+    return "local_outbox"
 
 
 def log_email_event(
@@ -298,6 +304,8 @@ def send_email(
             return False, f"Kunde inte spara lokalt email: {exc}"
 
     try:
+        if not SMTP_HOST:
+            raise RuntimeError("SMTP_HOST is not configured.")
         if SMTP_USE_SSL:
             with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
                 if SMTP_USERNAME:
@@ -705,13 +713,39 @@ def update_status(reservation_id: int):
     return redirect(request.referrer or url_for("admin"))
 
 
+
+@app.post("/admin/email-test")
+@admin_required
+def admin_email_test():
+    recipient = request.form.get("recipient", "").strip() or RESTAURANT_EMAIL
+
+    if not EMAIL_RE.match(recipient):
+        flash("Ogiltig emailadress för test.", "error")
+        return redirect(url_for("admin"))
+
+    ok, message = send_email(
+        recipient=recipient,
+        subject="Test Restaurant – Backend V4 testmail",
+        body=(
+            "Detta är ett testmail från Test Restaurant Backend V4.\n\n"
+            f"Email-läge: {email_mode()}\n"
+            f"Skickat: {datetime.now().isoformat(timespec='seconds')}\n"
+        ),
+        reservation_id=None,
+        event_type="admin_test",
+    )
+
+    flash(message, "success" if ok else "error")
+    return redirect(url_for("admin"))
+
+
 @app.get("/api/health")
 def health():
     return jsonify(
         {
             "ok": True,
             "database": DB_PATH.name,
-            "backend_version": "V3",
+            "backend_version": "V4",
             "max_guests_per_slot": MAX_GUESTS_PER_SLOT,
             "email_mode": email_mode(),
             "restaurant_email": RESTAURANT_EMAIL,

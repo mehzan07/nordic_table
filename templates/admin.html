@@ -30,7 +30,7 @@
 <body>
 <header>
   <div class="wrap">
-    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V3 · SQLite · email-notifieringar</small></div>
+    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V4 · SQLite · riktig SMTP eller lokal test</small></div>
     <div><a href="/">← Webbplats</a>&nbsp;&nbsp;<form method="post" action="/admin/logout"><button type="submit">Logga ut</button></form></div>
   </div>
 </header>
@@ -41,6 +41,17 @@
 
   <div class="summary">
     <div class="pill">Visade bokningar: <strong>{{ reservations|length }}</strong></div>
+  <div class="flash info">
+    <strong>V4 email-test:</strong>
+    <form method="post" action="/admin/email-test" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px">
+      <label style="display:flex;flex-direction:column;gap:5px">
+        Testmottagare
+        <input type="email" name="recipient" value="{{ restaurant_email }}" required>
+      </label>
+      <button class="btn primary" type="submit">Skicka testmail</button>
+    </form>
+  </div>
+
     <div class="pill">Kapacitet per tid: <strong>{{ max_guests_per_slot }} gäster</strong></div>
     <div class="pill">Email-läge: <span class="email-mode">{{ 'Riktig SMTP' if email_mode == 'smtp' else 'Lokal test-outbox' }}</span></div>
     <div class="pill">Restaurang-email: <strong>{{ restaurant_email }}</strong></div>
@@ -80,7 +91,7 @@
     </tbody></table>{% else %}<div class="empty">Inga email-händelser ännu.</div>{% endif %}
   </div>
 
-  <p class="note">Backend V3 skickar/sparar kundmail när en bokning tas emot och när status ändras. Restaurangen får också notifiering om nya bokningar.</p>
+  <p class="note">Backend V4 kan använda riktig SMTP eller lokal outbox. Använd Skicka testmail innan du aktiverar riktig kundmail.</p>
 </main>
 </body>
 </html>
