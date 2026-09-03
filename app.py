@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import os
 import re
+import smtplib
 import sqlite3
 from datetime import date, datetime
+from email.message import EmailMessage
 from functools import wraps
 from pathlib import Path
 
@@ -20,12 +22,24 @@ from flask import (
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "reservations.db"
+OUTBOX_DIR = BASE_DIR / "email_outbox"
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-me")
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "demo1234")
 MAX_GUESTS_PER_SLOT = int(os.getenv("MAX_GUESTS_PER_SLOT", "20"))
+
+# Email configuration. If SMTP_HOST is empty, Backend V3 stores emails locally
+# in email_outbox/ so the complete workflow can be tested without an email account.
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() in {"1", "true", "yes", "on"}
+SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").lower() in {"1", "true", "yes", "on"}
+EMAIL_FROM = os.getenv("EMAIL_FROM", SMTP_USERNAME or "bookings@test-restaurant.local")
+RESTAURANT_EMAIL = os.getenv("RESTAURANT_EMAIL", "restaurant@test-restaurant.local")
 
 REFERENCE_RE = re.compile(r"^TR-\d{6}-\d{4}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,63}$")
@@ -39,6 +53,18 @@ OPENING_HOURS = {
     4: ("11:00", "23:00"),
     5: ("11:00", "23:00"),
     6: ("12:00", "21:00"),
+}
+
+STATUS_SV = {
+    "pending": "Väntar",
+    "confirmed": "Bekräftad",
+    "cancelled": "Avbokad",
+}
+
+STATUS_EN = {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "cancelled": "Cancelled",
 }
 
 
@@ -76,6 +102,22 @@ def init_db() -> None:
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_reservation_email ON reservations(email)"
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reservation_id INTEGER,
+                created_at TEXT NOT NULL,
+                recipient TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                delivery_mode TEXT NOT NULL,
+                delivery_status TEXT NOT NULL,
+                error_message TEXT NOT NULL DEFAULT '',
+                FOREIGN KEY(reservation_id) REFERENCES reservations(id)
+            )
+            """
         )
 
 
@@ -178,6 +220,236 @@ def admin_required(view_func):
     return wrapped
 
 
+def email_mode() -> str:
+    return "smtp" if SMTP_HOST else "local_outbox"
+
+
+def log_email_event(
+    reservation_id: int | None,
+    recipient: str,
+    subject: str,
+    event_type: str,
+    delivery_mode: str,
+    delivery_status: str,
+    error_message: str = "",
+) -> None:
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO email_events (
+                reservation_id, created_at, recipient, subject, event_type,
+                delivery_mode, delivery_status, error_message
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                reservation_id,
+                datetime.now().isoformat(timespec="seconds"),
+                recipient,
+                subject,
+                event_type,
+                delivery_mode,
+                delivery_status,
+                error_message,
+            ),
+        )
+
+
+def send_email(
+    *,
+    recipient: str,
+    subject: str,
+    body: str,
+    reservation_id: int | None,
+    event_type: str,
+) -> tuple[bool, str]:
+    message = EmailMessage()
+    message["From"] = EMAIL_FROM
+    message["To"] = recipient
+    message["Subject"] = subject
+    message.set_content(body)
+
+    mode = email_mode()
+
+    if mode == "local_outbox":
+        try:
+            OUTBOX_DIR.mkdir(parents=True, exist_ok=True)
+            safe_ref = re.sub(r"[^A-Za-z0-9_-]+", "_", event_type)
+            filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{safe_ref}.eml"
+            (OUTBOX_DIR / filename).write_bytes(message.as_bytes())
+            log_email_event(
+                reservation_id,
+                recipient,
+                subject,
+                event_type,
+                mode,
+                "saved",
+            )
+            return True, f"Email sparades lokalt i email_outbox/{filename}"
+        except Exception as exc:
+            log_email_event(
+                reservation_id,
+                recipient,
+                subject,
+                event_type,
+                mode,
+                "failed",
+                str(exc),
+            )
+            return False, f"Kunde inte spara lokalt email: {exc}"
+
+    try:
+        if SMTP_USE_SSL:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+                if SMTP_USERNAME:
+                    smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+                smtp.send_message(message)
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+                smtp.ehlo()
+                if SMTP_USE_TLS:
+                    smtp.starttls()
+                    smtp.ehlo()
+                if SMTP_USERNAME:
+                    smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+                smtp.send_message(message)
+
+        log_email_event(
+            reservation_id,
+            recipient,
+            subject,
+            event_type,
+            mode,
+            "sent",
+        )
+        return True, f"Email skickades till {recipient}"
+    except Exception as exc:
+        log_email_event(
+            reservation_id,
+            recipient,
+            subject,
+            event_type,
+            mode,
+            "failed",
+            str(exc),
+        )
+        return False, f"Email kunde inte skickas: {exc}"
+
+
+def customer_received_email(reservation: sqlite3.Row) -> tuple[str, str]:
+    if reservation["language"] == "en":
+        subject = f"Reservation request received – {reservation['reference']}"
+        body = f"""Hello {reservation['name']},
+
+We have received your reservation request.
+
+Reference: {reservation['reference']}
+Date: {reservation['reservation_date']}
+Time: {reservation['reservation_time']}
+Guests: {reservation['guests']}
+Status: Pending
+
+The restaurant will review your request and confirm it.
+
+Test Restaurant
+"""
+    else:
+        subject = f"Bokningsförfrågan mottagen – {reservation['reference']}"
+        body = f"""Hej {reservation['name']},
+
+Vi har tagit emot din bokningsförfrågan.
+
+Bokningsnummer: {reservation['reference']}
+Datum: {reservation['reservation_date']}
+Tid: {reservation['reservation_time']}
+Gäster: {reservation['guests']}
+Status: Väntar
+
+Restaurangen granskar din förfrågan och återkommer med bekräftelse.
+
+Test Restaurant
+"""
+    return subject, body
+
+
+def restaurant_new_booking_email(reservation: sqlite3.Row) -> tuple[str, str]:
+    dish = reservation["selected_dish_name_sv"] or "—"
+    if reservation["selected_dish_price"]:
+        dish += f" – {reservation['selected_dish_price']}"
+
+    subject = f"Ny bokningsförfrågan – {reservation['reference']}"
+    body = f"""Ny bokningsförfrågan har kommit in.
+
+Bokningsnummer: {reservation['reference']}
+Kund: {reservation['name']}
+Telefon: {reservation['phone']}
+Email: {reservation['email']}
+Datum: {reservation['reservation_date']}
+Tid: {reservation['reservation_time']}
+Gäster: {reservation['guests']}
+Vald rätt: {dish}
+Önskemål: {reservation['special_requests'] or '—'}
+Status: Väntar
+
+Öppna Admin för att bekräfta eller avboka bokningen.
+"""
+    return subject, body
+
+
+def customer_status_email(reservation: sqlite3.Row, status: str) -> tuple[str, str]:
+    language = reservation["language"]
+
+    if language == "en":
+        subjects = {
+            "confirmed": f"Reservation confirmed – {reservation['reference']}",
+            "pending": f"Reservation still pending – {reservation['reference']}",
+            "cancelled": f"Reservation cancelled – {reservation['reference']}",
+        }
+        status_text = STATUS_EN[status]
+        extra = {
+            "confirmed": "Your reservation has been confirmed. We look forward to welcoming you.",
+            "pending": "Your reservation request is still being reviewed by the restaurant.",
+            "cancelled": "Your reservation has been cancelled. Please contact the restaurant if you have questions.",
+        }[status]
+        body = f"""Hello {reservation['name']},
+
+{extra}
+
+Reference: {reservation['reference']}
+Date: {reservation['reservation_date']}
+Time: {reservation['reservation_time']}
+Guests: {reservation['guests']}
+Status: {status_text}
+
+Test Restaurant
+"""
+        return subjects[status], body
+
+    subjects = {
+        "confirmed": f"Bokning bekräftad – {reservation['reference']}",
+        "pending": f"Bokning väntar fortfarande – {reservation['reference']}",
+        "cancelled": f"Bokning avbokad – {reservation['reference']}",
+    }
+    status_text = STATUS_SV[status]
+    extra = {
+        "confirmed": "Din bokning är bekräftad. Vi ser fram emot att välkomna dig.",
+        "pending": "Din bokningsförfrågan behandlas fortfarande av restaurangen.",
+        "cancelled": "Din bokning har avbokats. Kontakta gärna restaurangen om du har frågor.",
+    }[status]
+    body = f"""Hej {reservation['name']},
+
+{extra}
+
+Bokningsnummer: {reservation['reference']}
+Datum: {reservation['reservation_date']}
+Tid: {reservation['reservation_time']}
+Gäster: {reservation['guests']}
+Status: {status_text}
+
+Test Restaurant
+"""
+    return subjects[status], body
+
+
 @app.get("/")
 def home():
     return render_template("index.html")
@@ -223,7 +495,7 @@ def create_reservation():
             )
 
         try:
-            conn.execute(
+            cursor = conn.execute(
                 """
                 INSERT INTO reservations (
                     reference, created_at, name, phone, email, guests,
@@ -245,13 +517,35 @@ def create_reservation():
                     str(data.get("selected_dish_name_sv", "")).strip(),
                     str(data.get("selected_dish_name_en", "")).strip(),
                     str(data.get("selected_dish_price", "")).strip(),
-                    "en"
-                    if str(data.get("language", "sv")).lower().startswith("en")
-                    else "sv",
+                    "en" if str(data.get("language", "sv")).lower().startswith("en") else "sv",
                 ),
             )
+            reservation_id = cursor.lastrowid
         except sqlite3.IntegrityError:
             return jsonify({"ok": False, "error": "Reservation reference already exists."}), 409
+
+        reservation = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation_id,)
+        ).fetchone()
+
+    # Notification failures do not delete the reservation. They are logged.
+    customer_subject, customer_body = customer_received_email(reservation)
+    customer_ok, customer_message = send_email(
+        recipient=reservation["email"],
+        subject=customer_subject,
+        body=customer_body,
+        reservation_id=reservation_id,
+        event_type="customer_received",
+    )
+
+    restaurant_subject, restaurant_body = restaurant_new_booking_email(reservation)
+    restaurant_ok, restaurant_message = send_email(
+        recipient=RESTAURANT_EMAIL,
+        subject=restaurant_subject,
+        body=restaurant_body,
+        reservation_id=reservation_id,
+        event_type="restaurant_new_booking",
+    )
 
     return (
         jsonify(
@@ -259,9 +553,11 @@ def create_reservation():
                 "ok": True,
                 "reference": reference,
                 "status": "pending",
-                "remaining_capacity": remaining_capacity(
-                    reservation_date, reservation_time
-                ),
+                "remaining_capacity": remaining_capacity(reservation_date, reservation_time),
+                "email_mode": email_mode(),
+                "customer_email": customer_ok,
+                "restaurant_email": restaurant_ok,
+                "email_messages": [customer_message, restaurant_message],
             }
         ),
         201,
@@ -335,10 +631,20 @@ def admin():
 
     with get_db() as conn:
         rows = conn.execute(query, params).fetchall()
+        email_rows = conn.execute(
+            """
+            SELECT * FROM email_events
+            ORDER BY created_at DESC, id DESC
+            LIMIT 20
+            """
+        ).fetchall()
 
     return render_template(
         "admin.html",
         reservations=rows,
+        email_events=email_rows,
+        email_mode=email_mode(),
+        restaurant_email=RESTAURANT_EMAIL,
         max_guests_per_slot=MAX_GUESTS_PER_SLOT,
         status_filter=status_filter,
         date_filter=date_filter,
@@ -353,9 +659,47 @@ def update_status(reservation_id: int):
         return "Invalid status", 400
 
     with get_db() as conn:
+        reservation = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation_id,)
+        ).fetchone()
+
+        if reservation is None:
+            return "Reservation not found", 404
+
+        old_status = reservation["status"]
+        if old_status == status:
+            flash(
+                f"Bokningen {reservation['reference']} har redan status {STATUS_SV[status]}. Inget nytt email skickades.",
+                "info",
+            )
+            return redirect(request.referrer or url_for("admin"))
+
         conn.execute(
             "UPDATE reservations SET status = ? WHERE id = ?",
             (status, reservation_id),
+        )
+        reservation = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation_id,)
+        ).fetchone()
+
+    subject, body = customer_status_email(reservation, status)
+    email_ok, email_message = send_email(
+        recipient=reservation["email"],
+        subject=subject,
+        body=body,
+        reservation_id=reservation_id,
+        event_type=f"customer_status_{status}",
+    )
+
+    if email_ok:
+        flash(
+            f"Status ändrad till {STATUS_SV[status]}. {email_message}.",
+            "success",
+        )
+    else:
+        flash(
+            f"Status ändrad till {STATUS_SV[status]}, men email misslyckades: {email_message}",
+            "error",
         )
 
     return redirect(request.referrer or url_for("admin"))
@@ -367,8 +711,10 @@ def health():
         {
             "ok": True,
             "database": DB_PATH.name,
-            "backend_version": "V2",
+            "backend_version": "V3",
             "max_guests_per_slot": MAX_GUESTS_PER_SLOT,
+            "email_mode": email_mode(),
+            "restaurant_email": RESTAURANT_EMAIL,
         }
     )
 

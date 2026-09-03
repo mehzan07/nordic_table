@@ -1,59 +1,92 @@
-# Test Restaurant – Backend V2
+# Test Restaurant – Backend V3
 
-Backend V2 builds on Backend V1 and keeps the Frontend V29 design.
+Backend V3 builds on tested Backend V2 and adds automatic email notifications.
 
-## New in V2
+## New in V3
 
-- Password-protected admin page
-- Admin login/logout
-- Capacity per 30-minute reservation slot
-- Default capacity: 20 active guests per slot
-- Pending + confirmed reservations count toward capacity
-- Cancelled reservations free capacity
-- Admin filters by date and status
-- Availability API endpoint
-- Existing SQLite reservation database continues to work
+- Customer receives a message when a reservation request is saved.
+- Restaurant receives a **New reservation request** notification.
+- When Admin clicks **Bekräfta**, customer receives a confirmation email.
+- When Admin clicks **Väntar**, customer receives a pending-status email.
+- When Admin clicks **Avboka**, customer receives a cancellation email.
+- Clicking the already-active status does not send a duplicate email.
+- Admin shows the latest email delivery events.
+- Safe **local outbox mode** works without any email provider.
+- Real SMTP delivery can be enabled later through environment variables.
 
-## Run
+## Important: first test V3 without a real email account
+
+By default `SMTP_HOST` is empty. This means Backend V3 does **not** send email to the Internet. Instead, it creates email files in:
+
+```text
+email_outbox/
+```
+
+These `.eml` files can be opened to inspect the exact messages that would be sent. The folder is ignored by Git.
+
+This allows you to test the complete workflow safely before entering real SMTP credentials.
+
+## Run V3
+
+Use the existing virtual environment:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python app.py
 ```
 
-Open the restaurant at `http://127.0.0.1:5000`.
+Open:
 
-Open Admin at `http://127.0.0.1:5000/admin`.
+```text
+http://127.0.0.1:5000
+```
 
-Local demo admin password:
+Admin:
+
+```text
+http://127.0.0.1:5000/admin
+```
+
+Default local demo admin password:
 
 ```text
 demo1234
 ```
 
-## Optional settings
+## Test email workflow
 
-For local testing you can change the password, Flask secret and slot capacity:
+1. Create a new reservation from the website and click **Spara bokning**.
+2. Open the project folder. A new `email_outbox` folder should appear.
+3. Two `.eml` files should be created:
+   - customer: reservation request received
+   - restaurant: new reservation request
+4. Open `/admin`.
+5. Click **Bekräfta** on the reservation.
+6. A third `.eml` file should appear containing the customer confirmation.
+7. Change the status to **Avboka** and another customer email should be created.
+8. Admin shows recent email events and whether they were saved/sent/failed.
+
+## Real email later
+
+For real SMTP sending, set environment variables before starting Flask. Example:
 
 ```powershell
-$env:ADMIN_PASSWORD="Choose-A-Strong-Password"
-$env:SECRET_KEY="replace-with-a-long-random-secret"
-$env:MAX_GUESTS_PER_SLOT="24"
+$env:SMTP_HOST="smtp.your-provider.example"
+$env:SMTP_PORT="587"
+$env:SMTP_USERNAME="your-user"
+$env:SMTP_PASSWORD="your-app-password"
+$env:SMTP_USE_TLS="true"
+$env:EMAIL_FROM="bookings@yourrestaurant.se"
+$env:RESTAURANT_EMAIL="restaurant@yourrestaurant.se"
 python app.py
 ```
 
-## Capacity example
+Do not commit passwords or app passwords to GitHub. `.env.example` contains only placeholders.
 
-If reservations for 8 guests and 7 guests already exist at 19:00, only 5 places remain. A new reservation for 6 guests at 19:00 is rejected.
+## SQLite
 
-Cancelled reservations no longer count toward capacity.
+V3 continues to use the same `reservations.db` from V1/V2. It also creates a new `email_events` table automatically. Existing reservations are preserved.
 
-## Availability API
+## Next possible step
 
-Example:
-
-```text
-/api/availability?date=2026-09-18&time=19:00
-```
-
-The existing `reservations.db` remains local and excluded from GitHub by `.gitignore`.
+After this local email workflow is tested, we can connect a real email provider and then consider SMS notifications.
