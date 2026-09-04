@@ -23,14 +23,14 @@
     td{font-size:14px}.ref{font-weight:800;white-space:nowrap}.dish{max-width:220px}.status{font-weight:800;text-transform:capitalize}
     form.actions{display:flex;gap:6px}button,.btn{border:1px solid #222;background:white;padding:7px 9px;border-radius:7px;cursor:pointer;text-decoration:none;color:#171717}
     button.confirm,.btn.primary{background:#171717;color:white}.empty{text-align:center;padding:48px 20px}.note{font-size:12px;opacity:.65;margin-top:18px}
-    .flash{padding:12px 14px;border-radius:10px;margin-bottom:14px;border:1px solid #ddd}.flash.success{background:#edf8ef;border-color:#b9dfc0}.flash.error{background:#fff0f0;border-color:#efb0b0}.flash.info{background:#eef5ff;border-color:#b9d4ef}
+    .flash{white-space:pre-line;padding:12px 14px;border-radius:10px;margin-bottom:14px;border:1px solid #ddd}.flash.success{background:#edf8ef;border-color:#b9dfc0}.flash.error{background:#fff0f0;border-color:#efb0b0}.flash.info{background:#eef5ff;border-color:#b9d4ef}
     h2{margin-top:32px}.email-mode{font-weight:800}.small-table table{min-width:760px}.delivery-sent,.delivery-saved{font-weight:800}.delivery-failed{font-weight:800;color:#9a1f1f}
   </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V4 · SQLite · riktig SMTP eller lokal test</small></div>
+    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V5 · SQLite · SMTP-diagnostik · lokal test</small></div>
     <div><a href="/">← Webbplats</a>&nbsp;&nbsp;<form method="post" action="/admin/logout"><button type="submit">Logga ut</button></form></div>
   </div>
 </header>
@@ -42,13 +42,17 @@
   <div class="summary">
     <div class="pill">Visade bokningar: <strong>{{ reservations|length }}</strong></div>
   <div class="flash info">
-    <strong>V4 email-test:</strong>
+    <strong>V5 email- och SMTP-test:</strong>
     <form method="post" action="/admin/email-test" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px">
       <label style="display:flex;flex-direction:column;gap:5px">
         Testmottagare
         <input type="email" name="recipient" value="{{ restaurant_email }}" required>
       </label>
       <button class="btn primary" type="submit">Skicka testmail</button>
+    </form>
+    <form method="post" action="/admin/smtp-diagnostic" style="margin-top:10px">
+      <button class="btn" type="submit">Kör SMTP-diagnostik</button>
+      <small style="margin-left:8px">Testar anslutning, EHLO, STARTTLS och inloggning utan att skicka email.</small>
     </form>
   </div>
 
@@ -91,7 +95,7 @@
     </tbody></table>{% else %}<div class="empty">Inga email-händelser ännu.</div>{% endif %}
   </div>
 
-  <p class="note">Backend V4 kan använda riktig SMTP eller lokal outbox. Använd Skicka testmail innan du aktiverar riktig kundmail.</p>
+  <p class="note">Backend V5 kan diagnostisera SMTP steg för steg. Kör SMTP-diagnostik före Skicka testmail när riktig SMTP används.</p>
 </main>
 </body>
 </html>

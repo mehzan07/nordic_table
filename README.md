@@ -1,80 +1,67 @@
-# Test Restaurant – Backend V4
+# Test Restaurant – Backend V5
 
-Backend V4 keeps all V3 reservation, admin, capacity and email-history features and adds easier real email configuration.
+Backend V5 preserves the V4 reservation, admin, capacity, SQLite, local outbox and real SMTP features, and adds step-by-step SMTP diagnostics.
 
-## New in V4
+## New in V5
 
-- Reads private settings automatically from a local `.env` file.
-- Explicit email mode:
-  - `EMAIL_MODE=outbox` for safe local `.eml` testing.
-  - `EMAIL_MODE=smtp` for real email.
-- Admin has **Skicka testmail** so SMTP can be tested before using customer addresses.
-- Clear error if SMTP mode is enabled without an SMTP host.
-- `.env` is excluded from GitHub.
-- `.env.example` is safe to commit.
+- Admin button **Kör SMTP-diagnostik**.
+- Tests SMTP without sending an email.
+- Shows the exact stage that succeeds or fails:
+  1. TCP / SSL connection and server greeting
+  2. SMTP EHLO
+  3. STARTTLS (when enabled)
+  4. Authentication/login
+  5. Send is deliberately skipped during diagnostics
+- Normal **Skicka testmail** errors now also identify the failing SMTP stage.
+- Health endpoint reports Backend V5.
+- No password is displayed by the diagnostic output.
 
-## Important
+## Safe configuration
 
-Keep V4 in `EMAIL_MODE=outbox` first.
+Keep real secrets only in `.env`. Never commit `.env` or `email_outbox/`.
 
-After V4 works locally, create `.env` by copying `.env.example`, enter your real provider settings, then change:
+Start with local mode:
+
+```text
+EMAIL_MODE=outbox
+```
+
+For real SMTP, configure `.env` with your provider settings and use:
 
 ```text
 EMAIL_MODE=smtp
 ```
 
-Never put a real email password in `.env.example`.
+Restart Flask after changing `.env`.
 
 ## Run
 
-Activate your existing virtual environment:
+If VS Code is configured for this project, its terminal should automatically activate `.venv`.
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-Install the new V4 dependency:
+Install/update dependencies:
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-Start Flask:
+Start:
 
 ```powershell
 python app.py
 ```
 
-Website:
+Website: `http://127.0.0.1:5000`
 
-```text
-http://127.0.0.1:5000
-```
+Admin: `http://127.0.0.1:5000/admin`
 
-Admin:
+## Recommended V5 SMTP test
 
-```text
-http://127.0.0.1:5000/admin
-```
+1. Set `EMAIL_MODE=smtp` in your private `.env`.
+2. Restart Flask.
+3. Log in to Admin.
+4. Click **Kör SMTP-diagnostik** first.
+5. Read the last successful stage and the failure message.
+6. Only after diagnostics succeeds, use **Skicka testmail**.
+7. Only after the test email succeeds, test customer reservation emails.
 
-The local demo admin password remains `demo1234` unless you set another value in `.env`.
-
-## First test
-
-1. Leave `EMAIL_MODE=outbox`.
-2. Make a reservation.
-3. Confirm or cancel it in Admin.
-4. Check `email_outbox/`.
-5. In Admin use **Skicka testmail**.
-6. Verify the email event appears in the email history.
-
-## Real email test
-
-1. Copy `.env.example` to `.env`.
-2. Enter SMTP settings from your email provider.
-3. Set `EMAIL_MODE=smtp`.
-4. Restart Flask.
-5. Open Admin and click **Skicka testmail**.
-6. Only after that succeeds, test customer confirmation email.
-
-V4 is still a development version. Before public deployment we should add CSRF protection, stronger production authentication, HTTPS deployment settings, rate limiting and secure secret management.
+V5 is still a development version. Production hardening such as CSRF protection, stronger authentication, HTTPS deployment settings, rate limiting and managed secrets should be added before public deployment.

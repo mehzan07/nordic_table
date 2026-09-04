@@ -34,8 +34,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "demo1234")
 MAX_GUESTS_PER_SLOT = int(os.getenv("MAX_GUESTS_PER_SLOT", "20"))
 EMAIL_MODE = os.getenv("EMAIL_MODE", "outbox").strip().lower()
 
-# Email configuration. If SMTP_HOST is empty, Backend V3 stores emails locally
-# in email_outbox/ so the complete workflow can be tested without an email account.
+# Email configuration. V5 supports local outbox plus step-by-step SMTP diagnostics.
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
@@ -260,6 +259,69 @@ def log_email_event(
         )
 
 
+def smtp_diagnostic() -> tuple[bool, list[str]]:
+    """Test SMTP step by step without sending an email or exposing credentials."""
+    steps: list[str] = []
+
+    if EMAIL_MODE != "smtp":
+        return False, ["EMAIL_MODE is not smtp. Set EMAIL_MODE=smtp and restart Flask."]
+    if not SMTP_HOST:
+        return False, ["Configuration: FAILED – SMTP_HOST is empty."]
+
+    smtp = None
+    try:
+        steps.append(f"Configuration: host={SMTP_HOST}, port={SMTP_PORT}, SSL={SMTP_USE_SSL}, STARTTLS={SMTP_USE_TLS}")
+
+        if SMTP_USE_SSL:
+            steps.append("1. TCP/SSL connection: starting...")
+            smtp = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15)
+            steps.append("1. TCP/SSL connection: OK")
+            steps.append("2. SMTP greeting/EHLO: starting...")
+            code, _ = smtp.ehlo()
+            if code >= 400:
+                raise RuntimeError(f"EHLO returned SMTP code {code}")
+            steps.append(f"2. SMTP greeting/EHLO: OK ({code})")
+        else:
+            steps.append("1. TCP connection: starting...")
+            smtp = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15)
+            steps.append("1. TCP connection + server greeting: OK")
+            steps.append("2. SMTP EHLO: starting...")
+            code, _ = smtp.ehlo()
+            if code >= 400:
+                raise RuntimeError(f"EHLO returned SMTP code {code}")
+            steps.append(f"2. SMTP EHLO: OK ({code})")
+
+            if SMTP_USE_TLS:
+                steps.append("3. STARTTLS: starting...")
+                smtp.starttls()
+                smtp.ehlo()
+                steps.append("3. STARTTLS: OK")
+            else:
+                steps.append("3. STARTTLS: skipped by configuration")
+
+        if SMTP_USERNAME:
+            steps.append("4. Authentication: starting...")
+            smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+            steps.append("4. Authentication: OK")
+        else:
+            steps.append("4. Authentication: skipped – SMTP_USERNAME is empty")
+
+        steps.append("5. Send: not performed (diagnostic only)")
+        return True, steps
+    except Exception as exc:
+        steps.append(f"FAILED: {type(exc).__name__}: {exc}")
+        return False, steps
+    finally:
+        if smtp is not None:
+            try:
+                smtp.quit()
+            except Exception:
+                try:
+                    smtp.close()
+                except Exception:
+                    pass
+
+
 def send_email(
     *,
     recipient: str,
@@ -282,65 +344,48 @@ def send_email(
             safe_ref = re.sub(r"[^A-Za-z0-9_-]+", "_", event_type)
             filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{safe_ref}.eml"
             (OUTBOX_DIR / filename).write_bytes(message.as_bytes())
-            log_email_event(
-                reservation_id,
-                recipient,
-                subject,
-                event_type,
-                mode,
-                "saved",
-            )
+            log_email_event(reservation_id, recipient, subject, event_type, mode, "saved")
             return True, f"Email sparades lokalt i email_outbox/{filename}"
         except Exception as exc:
-            log_email_event(
-                reservation_id,
-                recipient,
-                subject,
-                event_type,
-                mode,
-                "failed",
-                str(exc),
-            )
+            log_email_event(reservation_id, recipient, subject, event_type, mode, "failed", str(exc))
             return False, f"Kunde inte spara lokalt email: {exc}"
 
+    stage = "configuration"
     try:
         if not SMTP_HOST:
             raise RuntimeError("SMTP_HOST is not configured.")
+
         if SMTP_USE_SSL:
+            stage = "TCP/SSL connection"
             with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
                 if SMTP_USERNAME:
+                    stage = "authentication"
                     smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+                stage = "sending message"
                 smtp.send_message(message)
         else:
+            stage = "TCP connection/server greeting"
             with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+                stage = "EHLO"
                 smtp.ehlo()
                 if SMTP_USE_TLS:
+                    stage = "STARTTLS"
                     smtp.starttls()
+                    stage = "EHLO after STARTTLS"
                     smtp.ehlo()
                 if SMTP_USERNAME:
+                    stage = "authentication"
                     smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+                stage = "sending message"
                 smtp.send_message(message)
 
-        log_email_event(
-            reservation_id,
-            recipient,
-            subject,
-            event_type,
-            mode,
-            "sent",
-        )
+        log_email_event(reservation_id, recipient, subject, event_type, mode, "sent")
         return True, f"Email skickades till {recipient}"
     except Exception as exc:
-        log_email_event(
-            reservation_id,
-            recipient,
-            subject,
-            event_type,
-            mode,
-            "failed",
-            str(exc),
-        )
-        return False, f"Email kunde inte skickas: {exc}"
+        detail = f"{stage}: {type(exc).__name__}: {exc}"
+        log_email_event(reservation_id, recipient, subject, event_type, mode, "failed", detail)
+        return False, f"Email kunde inte skickas vid steget {detail}"
+
 
 
 def customer_received_email(reservation: sqlite3.Row) -> tuple[str, str]:
@@ -714,6 +759,14 @@ def update_status(reservation_id: int):
 
 
 
+@app.post("/admin/smtp-diagnostic")
+@admin_required
+def admin_smtp_diagnostic():
+    ok, steps = smtp_diagnostic()
+    flash("SMTP-diagnostik\n" + "\n".join(steps), "success" if ok else "error")
+    return redirect(url_for("admin"))
+
+
 @app.post("/admin/email-test")
 @admin_required
 def admin_email_test():
@@ -725,9 +778,9 @@ def admin_email_test():
 
     ok, message = send_email(
         recipient=recipient,
-        subject="Test Restaurant – Backend V4 testmail",
+        subject="Test Restaurant – Backend V5 testmail",
         body=(
-            "Detta är ett testmail från Test Restaurant Backend V4.\n\n"
+            "Detta är ett testmail från Test Restaurant Backend V5.\n\n"
             f"Email-läge: {email_mode()}\n"
             f"Skickat: {datetime.now().isoformat(timespec='seconds')}\n"
         ),
@@ -745,7 +798,7 @@ def health():
         {
             "ok": True,
             "database": DB_PATH.name,
-            "backend_version": "V4",
+            "backend_version": "V5",
             "max_guests_per_slot": MAX_GUESTS_PER_SLOT,
             "email_mode": email_mode(),
             "restaurant_email": RESTAURANT_EMAIL,
