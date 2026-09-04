@@ -30,7 +30,7 @@
 <body>
 <header>
   <div class="wrap">
-    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V5 · SQLite · SMTP-diagnostik · lokal test</small></div>
+    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V6 · SQLite · live kapacitet · SMTP-diagnostik</small></div>
     <div><a href="/">← Webbplats</a>&nbsp;&nbsp;<form method="post" action="/admin/logout"><button type="submit">Logga ut</button></form></div>
   </div>
 </header>
@@ -42,7 +42,7 @@
   <div class="summary">
     <div class="pill">Visade bokningar: <strong>{{ reservations|length }}</strong></div>
   <div class="flash info">
-    <strong>V5 email- och SMTP-test:</strong>
+    <strong>V6 email- och SMTP-test:</strong>
     <form method="post" action="/admin/email-test" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px">
       <label style="display:flex;flex-direction:column;gap:5px">
         Testmottagare
@@ -95,7 +95,7 @@
     </tbody></table>{% else %}<div class="empty">Inga email-händelser ännu.</div>{% endif %}
   </div>
 
-  <p class="note">Backend V5 kan diagnostisera SMTP steg för steg. Kör SMTP-diagnostik före Skicka testmail när riktig SMTP används.</p>
+  <p class="note">Backend V6 behåller SMTP-diagnostiken från V5 och lägger till live kapacitetskontroll i bokningsformuläret.</p>
 </main>
 </body>
 </html>

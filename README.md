@@ -1,32 +1,41 @@
-# Test Restaurant – Backend V5
+# Test Restaurant – Backend V6
 
-Backend V5 preserves the V4 reservation, admin, capacity, SQLite, local outbox and real SMTP features, and adds step-by-step SMTP diagnostics.
+Backend V6 preserves all V5 features and adds live, capacity-aware reservation times to the customer booking form.
 
-## New in V5
+## New in V6
 
-- Admin button **Kör SMTP-diagnostik**.
-- Tests SMTP without sending an email.
-- Shows the exact stage that succeeds or fails:
-  1. TCP / SSL connection and server greeting
-  2. SMTP EHLO
-  3. STARTTLS (when enabled)
-  4. Authentication/login
-  5. Send is deliberately skipped during diagnostics
-- Normal **Skicka testmail** errors now also identify the failing SMTP stage.
-- Health endpoint reports Backend V5.
-- No password is displayed by the diagnostic output.
+- The reservation form checks the backend for the selected day's current capacity.
+- Time options display remaining seats, for example `19:30 — 6 platser kvar`.
+- Fully booked slots are disabled automatically.
+- If the selected party size is larger than the remaining capacity, that time is disabled.
+- Changing the number of guests re-evaluates the same day's slots immediately.
+- The existing server-side capacity check remains authoritative, so a booking is still rejected if another customer fills the slot before save.
+- `GET /api/availability?date=YYYY-MM-DD` now returns all opening-hour slots for that date in one request.
+- The older single-slot API remains supported: `GET /api/availability?date=YYYY-MM-DD&time=HH:MM`.
+- Health endpoint reports Backend V6.
+
+## V5 features retained
+
+- Flask + SQLite reservation storage.
+- Password-protected Admin page.
+- Pending / confirmed / cancelled statuses.
+- Capacity per 30-minute slot; cancelled reservations free capacity.
+- Local `.eml` email outbox.
+- Real SMTP configuration through private `.env`.
+- Step-by-step SMTP diagnostics: connection, EHLO, STARTTLS and authentication.
+- Test-email button and email event log.
 
 ## Safe configuration
 
-Keep real secrets only in `.env`. Never commit `.env` or `email_outbox/`.
+Keep real secrets only in `.env`. Never commit `.env`, `reservations.db` or `email_outbox/`.
 
-Start with local mode:
+Local email mode:
 
 ```text
 EMAIL_MODE=outbox
 ```
 
-For real SMTP, configure `.env` with your provider settings and use:
+Real SMTP mode:
 
 ```text
 EMAIL_MODE=smtp
@@ -36,17 +45,10 @@ Restart Flask after changing `.env`.
 
 ## Run
 
-If VS Code is configured for this project, its terminal should automatically activate `.venv`.
-
-Install/update dependencies:
+With the project's virtual environment active:
 
 ```powershell
 python -m pip install -r requirements.txt
-```
-
-Start:
-
-```powershell
 python app.py
 ```
 
@@ -54,14 +56,14 @@ Website: `http://127.0.0.1:5000`
 
 Admin: `http://127.0.0.1:5000/admin`
 
-## Recommended V5 SMTP test
+## Recommended V6 test
 
-1. Set `EMAIL_MODE=smtp` in your private `.env`.
-2. Restart Flask.
-3. Log in to Admin.
-4. Click **Kör SMTP-diagnostik** first.
-5. Read the last successful stage and the failure message.
-6. Only after diagnostics succeeds, use **Skicka testmail**.
-7. Only after the test email succeeds, test customer reservation emails.
+1. Start Flask and open the restaurant website.
+2. Select a future date. The time list should show remaining seats.
+3. Change the number of guests. Any slot without enough capacity should become disabled.
+4. Create a reservation and confirm that it appears in Admin.
+5. Return to the same date and verify that the remaining capacity has decreased.
+6. Cancel the reservation in Admin and verify that the capacity becomes available again after refreshing/reselecting the date.
+7. SMTP can remain in outbox mode while testing V6 availability; Yahoo SMTP is not required for this feature.
 
-V5 is still a development version. Production hardening such as CSRF protection, stronger authentication, HTTPS deployment settings, rate limiting and managed secrets should be added before public deployment.
+V6 is still a development/demo version. Production deployment should later add CSRF protection, stronger authentication, HTTPS configuration, rate limiting and managed secrets.

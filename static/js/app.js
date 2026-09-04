@@ -1623,7 +1623,8 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         btn.textContent=sv ? "Bokning sparad ✓" : "Reservation saved ✓";
         btn.disabled=true;
-      }else if(response.status===409){
+        document.dispatchEvent(new CustomEvent("reservation:backend-saved",{detail:data}));
+      }else if(response.status===409 && (data.code==="duplicate_reservation" || data.reference)){
         setMessage(
           sv
             ? "Den här bokningen verkar redan vara sparad för samma e-post, datum och tid."
@@ -1632,6 +1633,17 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         btn.disabled=false;
         btn.textContent=sv ? "Spara bokning" : "Save reservation";
+      }else if(response.status===409 && data.code==="slot_capacity"){
+        const remaining=Number(data.remaining_capacity || 0);
+        setMessage(
+          sv
+            ? `Tiden har inte längre tillräckligt med plats. ${remaining} platser återstår. Välj en annan tid.`
+            : `This time no longer has enough capacity. ${remaining} seats remain. Please choose another time.`,
+          "warning"
+        );
+        btn.disabled=false;
+        btn.textContent=sv ? "Välj annan tid" : "Choose another time";
+        document.dispatchEvent(new CustomEvent("reservation:capacity-changed"));
       }else{
         const msg=data.error || (sv ? "Bokningen kunde inte sparas." : "The reservation could not be saved.");
         setMessage(msg,"error");
@@ -1681,4 +1693,173 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   });
+})();
+
+
+/* ===== Backend V6: live capacity-aware reservation times ===== */
+(function(){
+  "use strict";
+
+  let availabilityRequestId=0;
+  let cachedDate="";
+  let cachedSlots=[];
+
+  function byId(id){ return document.getElementById(id); }
+
+  function lang(){
+    const s=(localStorage.getItem("testRestaurantLanguageV12") ||
+             localStorage.getItem("testRestaurantLanguage") ||
+             document.documentElement.lang || "sv").toLowerCase();
+    return s.startsWith("en") ? "en" : "sv";
+  }
+
+  function guestCount(){
+    const value=Number(byId("guestCount")?.value || 0);
+    return Number.isFinite(value) && value > 0 ? value : 1;
+  }
+
+  function hint(text,kind){
+    const el=byId("timeAvailabilityHint");
+    if(!el) return;
+    el.textContent=text;
+    el.classList.remove("capacity-ok","capacity-warning","capacity-error");
+    if(kind) el.classList.add(kind);
+  }
+
+  function applyAvailability(slots){
+    const select=byId("reservationTime");
+    if(!select) return;
+
+    const needed=guestCount();
+    let suitable=0;
+    let full=0;
+    let low=0;
+    const map=new Map(slots.map(slot=>[slot.time,slot]));
+
+    [...select.options].forEach(option=>{
+      if(!option.value) return;
+      const slot=map.get(option.value);
+      if(!slot){
+        option.disabled=true;
+        return;
+      }
+
+      const remaining=Number(slot.remaining_capacity || 0);
+      const enough=remaining >= needed;
+      option.disabled=!enough;
+
+      if(remaining===0){
+        full++;
+        option.textContent=lang()==="en"
+          ? `${slot.time} — Full`
+          : `${slot.time} — Fullbokat`;
+      }else if(!enough){
+        option.textContent=lang()==="en"
+          ? `${slot.time} — ${remaining} left (not enough for ${needed})`
+          : `${slot.time} — ${remaining} kvar (inte nog för ${needed})`;
+      }else{
+        suitable++;
+        if(remaining<=4) low++;
+        option.textContent=lang()==="en"
+          ? `${slot.time} — ${remaining} seats left`
+          : `${slot.time} — ${remaining} platser kvar`;
+      }
+    });
+
+    if(select.value){
+      const selected=select.options[select.selectedIndex];
+      if(selected && selected.disabled) select.value="";
+    }
+
+    if(suitable===0){
+      hint(
+        lang()==="en"
+          ? `No time has enough capacity for ${needed} guest${needed===1?"":"s"}. Please choose another date or party size.`
+          : `Ingen tid har tillräcklig kapacitet för ${needed} gäst${needed===1?"":"er"}. Välj ett annat datum eller antal gäster.`,
+        "capacity-error"
+      );
+    }else if(low>0 || full>0){
+      hint(
+        lang()==="en"
+          ? `${suitable} suitable time${suitable===1?"":"s"}. Full or insufficient slots are disabled.`
+          : `${suitable} lämplig${suitable===1?"":"a"} tid${suitable===1?"":"er"}. Fullbokade eller otillräckliga tider är inaktiverade.`,
+        "capacity-warning"
+      );
+    }else{
+      hint(
+        lang()==="en"
+          ? `${suitable} available time${suitable===1?"":"s"} for your party.`
+          : `${suitable} tillgänglig${suitable===1?"":"a"} tid${suitable===1?"":"er"} för ert sällskap.`,
+        "capacity-ok"
+      );
+    }
+  }
+
+  async function refreshCapacity(){
+    const date=byId("reservationDate")?.value || "";
+    const select=byId("reservationTime");
+    if(!select || !date) return;
+
+    // If only the party size changed, re-apply already fetched values instantly.
+    if(date===cachedDate && cachedSlots.length){
+      applyAvailability(cachedSlots);
+      return;
+    }
+
+    const requestId=++availabilityRequestId;
+    hint(lang()==="en" ? "Checking live availability…" : "Kontrollerar lediga tider…","");
+
+    try{
+      const response=await fetch(`/api/availability?date=${encodeURIComponent(date)}`,{cache:"no-store"});
+      const data=await response.json().catch(()=>({}));
+      if(requestId!==availabilityRequestId) return;
+
+      if(!response.ok || !data.ok){
+        hint(lang()==="en" ? "Could not load live availability." : "Kunde inte hämta aktuell tillgänglighet.","capacity-error");
+        return;
+      }
+
+      cachedDate=date;
+      cachedSlots=Array.isArray(data.slots) ? data.slots : [];
+
+      if(data.closed || cachedSlots.length===0){
+        hint(lang()==="en" ? "The restaurant is closed on this date." : "Restaurangen är stängd detta datum.","capacity-error");
+        return;
+      }
+
+      applyAvailability(cachedSlots);
+    }catch(err){
+      if(requestId!==availabilityRequestId) return;
+      hint(
+        lang()==="en"
+          ? "Live capacity is temporarily unavailable. The server will still validate the booking when you save it."
+          : "Aktuell kapacitet kunde inte hämtas. Servern kontrollerar ändå bokningen när du sparar den.",
+        "capacity-warning"
+      );
+    }
+  }
+
+  function scheduleRefresh(forceFetch){
+    if(forceFetch){ cachedDate=""; cachedSlots=[]; }
+    // V21 rebuilds the time <select> on date/language changes; run after it.
+    setTimeout(refreshCapacity,40);
+  }
+
+  document.addEventListener("DOMContentLoaded",function(){ scheduleRefresh(true); });
+
+  document.addEventListener("change",function(e){
+    if(e.target?.id==="reservationDate") scheduleRefresh(true);
+    if(e.target?.id==="guestCount") scheduleRefresh(false);
+  });
+
+  document.addEventListener("click",function(e){
+    if(e.target?.closest("[data-v12-lang],[data-lang]")) scheduleRefresh(false);
+  });
+
+  // Refresh after the backend confirms a save, or rejects a slot because
+  // another booking consumed the remaining capacity.
+  document.addEventListener("reservation:backend-saved",function(){ scheduleRefresh(true); });
+  document.addEventListener("reservation:capacity-changed",function(){ scheduleRefresh(true); });
+
+  window.v6RefreshCapacity=refreshCapacity;
 })();

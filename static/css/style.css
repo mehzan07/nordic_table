@@ -470,3 +470,17 @@
 .backend-admin-link{text-align:center;padding:10px 16px 24px}
 .backend-admin-link a{font-size:12px;opacity:.65}
 .backend-admin-link a:hover{opacity:1}
+
+/* Backend V6 – live availability */
+.time-availability-hint{
+  display:block;
+  margin-top:7px;
+  min-height:18px;
+  font-size:12px;
+  line-height:1.4;
+  color:var(--muted);
+}
+.time-availability-hint.capacity-ok{color:#2e6b3f}
+.time-availability-hint.capacity-warning{color:#8a6415}
+.time-availability-hint.capacity-error{color:#9b2f2f}
+#reservationTime option:disabled{color:#8a8a8a}

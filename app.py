@@ -4,7 +4,7 @@ import os
 import re
 import smtplib
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from functools import wraps
 from pathlib import Path
@@ -34,7 +34,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "demo1234")
 MAX_GUESTS_PER_SLOT = int(os.getenv("MAX_GUESTS_PER_SLOT", "20"))
 EMAIL_MODE = os.getenv("EMAIL_MODE", "outbox").strip().lower()
 
-# Email configuration. V5 supports local outbox plus step-by-step SMTP diagnostics.
+# Email configuration. V6 preserves V5 local outbox plus step-by-step SMTP diagnostics.
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
@@ -165,6 +165,32 @@ def slot_guest_total(raw_date: str, raw_time: str) -> int:
 
 def remaining_capacity(raw_date: str, raw_time: str) -> int:
     return max(0, MAX_GUESTS_PER_SLOT - slot_guest_total(raw_date, raw_time))
+
+
+def opening_slots(raw_date: str) -> list[str]:
+    """Return every valid 30-minute reservation slot for a date."""
+    try:
+        d = datetime.strptime(raw_date, "%Y-%m-%d").date()
+    except ValueError:
+        return []
+
+    if d < date.today():
+        return []
+
+    hours = OPENING_HOURS[d.weekday()]
+    if hours is None:
+        return []
+
+    start_dt = datetime.combine(d, datetime.strptime(hours[0], "%H:%M").time())
+    close_dt = datetime.combine(d, datetime.strptime(hours[1], "%H:%M").time())
+    latest_dt = close_dt - timedelta(minutes=30)
+
+    slots: list[str] = []
+    cursor = start_dt
+    while cursor <= latest_dt:
+        slots.append(cursor.strftime("%H:%M"))
+        cursor += timedelta(minutes=30)
+    return slots
 
 
 def validate_payload(data: dict) -> str | None:
@@ -522,6 +548,11 @@ def create_reservation():
     reservation_time = str(data["reservation_time"]).strip()
 
     with get_db() as conn:
+        # V6: serialize reservation writes, then re-check capacity inside the
+        # same transaction. This prevents two near-simultaneous requests from
+        # both consuming the same last seats.
+        conn.execute("BEGIN IMMEDIATE")
+
         duplicate = conn.execute(
             """
             SELECT id, reference
@@ -541,7 +572,32 @@ def create_reservation():
                     {
                         "ok": False,
                         "error": "Duplicate reservation.",
+                        "code": "duplicate_reservation",
                         "reference": duplicate["reference"],
+                    }
+                ),
+                409,
+            )
+
+        capacity_row = conn.execute(
+            """
+            SELECT COALESCE(SUM(guests), 0) AS total
+            FROM reservations
+            WHERE reservation_date = ?
+              AND reservation_time = ?
+              AND status IN ('pending', 'confirmed')
+            """,
+            (reservation_date, reservation_time),
+        ).fetchone()
+        remaining_now = max(0, MAX_GUESTS_PER_SLOT - int(capacity_row["total"] or 0))
+        if int(data["guests"]) > remaining_now:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": "There is not enough remaining capacity for this time slot.",
+                        "code": "slot_capacity",
+                        "remaining_capacity": remaining_now,
                     }
                 ),
                 409,
@@ -622,6 +678,43 @@ def availability():
     raw_date = request.args.get("date", "").strip()
     raw_time = request.args.get("time", "").strip()
 
+    # V6: date-only requests return the whole day's availability in one call.
+    if raw_date and not raw_time:
+        slots = opening_slots(raw_date)
+        if not slots:
+            return jsonify(
+                {
+                    "ok": True,
+                    "date": raw_date,
+                    "closed": True,
+                    "max_capacity": MAX_GUESTS_PER_SLOT,
+                    "slots": [],
+                }
+            )
+
+        slot_data = []
+        for slot in slots:
+            remaining = remaining_capacity(raw_date, slot)
+            slot_data.append(
+                {
+                    "time": slot,
+                    "available": remaining > 0,
+                    "remaining_capacity": remaining,
+                    "max_capacity": MAX_GUESTS_PER_SLOT,
+                }
+            )
+
+        return jsonify(
+            {
+                "ok": True,
+                "date": raw_date,
+                "closed": False,
+                "max_capacity": MAX_GUESTS_PER_SLOT,
+                "slots": slot_data,
+            }
+        )
+
+    # Backward-compatible V2-V5 single-slot response.
     if not valid_slot(raw_date, raw_time):
         return (
             jsonify(
@@ -778,9 +871,9 @@ def admin_email_test():
 
     ok, message = send_email(
         recipient=recipient,
-        subject="Test Restaurant – Backend V5 testmail",
+        subject="Test Restaurant – Backend V6 testmail",
         body=(
-            "Detta är ett testmail från Test Restaurant Backend V5.\n\n"
+            "Detta är ett testmail från Test Restaurant Backend V6.\n\n"
             f"Email-läge: {email_mode()}\n"
             f"Skickat: {datetime.now().isoformat(timespec='seconds')}\n"
         ),
@@ -798,7 +891,7 @@ def health():
         {
             "ok": True,
             "database": DB_PATH.name,
-            "backend_version": "V5",
+            "backend_version": "V6",
             "max_guests_per_slot": MAX_GUESTS_PER_SLOT,
             "email_mode": email_mode(),
             "restaurant_email": RESTAURANT_EMAIL,
