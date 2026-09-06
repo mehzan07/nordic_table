@@ -32,7 +32,7 @@
 <body>
 <header>
   <div class="wrap">
-    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V8 · SQLite · dashboard · sök/filter · kapacitetsöversikt</small></div>
+    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V9 · SQLite · adminbokning · redigering · dashboard · kapacitet</small></div>
     <div><a href="/">← Webbplats</a>&nbsp;&nbsp;<form method="post" action="/admin/logout"><button type="submit">Logga ut</button></form></div>
   </div>
 </header>
@@ -52,6 +52,7 @@
 
   <div class="summary">
     <div class="pill">Visade bokningar: <strong>{{ reservations|length }}</strong></div>
+    <a class="btn primary" href="/admin/reservations/new">+ Ny manuell bokning</a>
   <div class="flash info">
     <strong>V8 email- och SMTP-test:</strong>
     <form method="post" action="/admin/email-test" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px">
@@ -118,17 +119,17 @@
   {% endif %}
 
   {% if reservations %}
-  <div class="table-wrap"><table><thead><tr><th>Referens</th><th>Datum</th><th>Tid</th><th>Gäster</th><th>Kund</th><th>Kontakt</th><th>Vald rätt</th><th>Önskemål</th><th>Status</th><th>Åtgärd</th></tr></thead><tbody>
+  <div class="table-wrap"><table><thead><tr><th>Referens</th><th>Datum</th><th>Tid</th><th>Gäster</th><th>Kund</th><th>Kontakt</th><th>Vald rätt</th><th>Önskemål</th><th>Adminnotering</th><th>Status</th><th>Åtgärd</th></tr></thead><tbody>
   {% for r in reservations %}
     <tr>
       <td class="ref">{{ r.reference }}</td><td>{{ r.reservation_date }}</td><td>{{ r.reservation_time }}</td><td>{{ r.guests }}</td><td>{{ r.name }}</td><td>{{ r.phone }}<br>{{ r.email }}</td>
       <td class="dish">{% if r.selected_dish_name_sv %}{{ r.selected_dish_name_sv }}{% if r.selected_dish_price %} – {{ r.selected_dish_price }}{% endif %}{% else %}—{% endif %}</td>
-      <td>{{ r.special_requests or '—' }}</td><td class="status"><span class="status-badge status-{{ r.status }}">{% if r.status == 'pending' %}Väntar{% elif r.status == 'confirmed' %}Bekräftad{% else %}Avbokad{% endif %}</span></td>
-      <td><form class="actions" method="post" action="/admin/reservations/{{ r.id }}/status">
+      <td>{{ r.special_requests or '—' }}</td><td>{{ r.admin_note or '—' }}</td><td class="status"><span class="status-badge status-{{ r.status }}">{% if r.status == 'pending' %}Väntar{% elif r.status == 'confirmed' %}Bekräftad{% else %}Avbokad{% endif %}</span></td>
+      <td><div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn" href="/admin/reservations/{{ r.id }}/edit">Visa / redigera</a><form class="actions" method="post" action="/admin/reservations/{{ r.id }}/status">
         <button class="confirm" name="status" value="confirmed" {% if r.status=='confirmed' %}disabled title="Redan bekräftad"{% endif %}>Bekräfta</button>
         <button name="status" value="pending" {% if r.status=='pending' %}disabled title="Redan väntande"{% endif %}>Väntar</button>
         <button name="status" value="cancelled" {% if r.status=='cancelled' %}disabled title="Redan avbokad"{% endif %}>Avboka</button>
-      </form></td>
+      </form></div></td>
     </tr>
   {% endfor %}
   </tbody></table></div>
@@ -141,7 +142,7 @@
     </tbody></table>{% else %}<div class="empty">Inga email-händelser ännu.</div>{% endif %}
   </div>
 
-  <p class="note">Backend V8 behåller V7 och lägger till dashboard-statistik, fritextsökning i bokningar och tydligare statusmarkeringar i Admin.</p>
+  <p class="note">Backend V9 behåller V8 och lägger till manuella adminbokningar, redigering, adminnoteringar och extra kapacitetsskydd när avbokade bokningar återaktiveras.</p>
 </main>
 </body>
 </html>

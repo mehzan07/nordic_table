@@ -1,56 +1,37 @@
-# Test Restaurant – Backend V8 fixed fixed
+# Test Restaurant – Backend V9
 
-Backend V8 fixed fixed preserves V7 and improves the restaurant Admin dashboard.
+Backend V9 preserves all tested V8 features and adds a faster restaurant-admin workflow.
 
-## New in V8 fixed
+## New in V9
 
-- Admin dashboard statistics:
-  - active reservations today (pending + confirmed)
-  - confirmed guests today
-  - upcoming pending reservations
-  - upcoming active reservations
-- Search reservations by reference, customer name, phone number, or email.
-- Search can be combined with the existing status and date filters.
-- Clear Swedish status badges for Väntar, Bekräftad, and Avbokad.
-- V7 capacity overview remains available with its independent date selector.
-- Reservation form still supports 1–20 guests and live remaining-seat availability.
-- Health endpoint reports Backend V8 fixed fixed.
+- Create a reservation manually from Admin with **+ Ny manuell bokning**.
+- Edit existing reservations with **Visa / redigera**.
+- Edit customer name, phone, email, guest count, date, time, status, language and special requests.
+- Add a private **Intern adminnotering** stored in SQLite and shown only in Admin.
+- Optional customer email when an admin creates or edits a reservation.
+- Capacity validation applies to manual creation and editing.
+- Reactivating a cancelled reservation is blocked if the time no longer has enough seats.
+- SQLite migration automatically adds the `admin_note` column to existing databases.
+- Health endpoint reports Backend V9.
 
-## Features retained from V7
+## Features retained from V8
 
-- Flask + SQLite reservation storage.
-- Password-protected Admin page.
-- Pending / confirmed / cancelled reservation statuses.
-- Live capacity-aware customer time selection.
-- Server-side overbooking protection.
+- Admin dashboard statistics.
+- Search by reservation reference, customer name, phone or email.
+- Combined status/date/search filters.
 - Capacity overview for any selected date.
-- Cancelled reservations free capacity immediately.
-- Local `.eml` email outbox.
-- Real SMTP configuration through private `.env`.
-- SMTP diagnostics and Admin test-email button.
-- Email delivery event log.
+- Live customer-side remaining-seat availability.
+- Server-side overbooking protection.
+- Pending / confirmed / cancelled statuses.
+- Local `.eml` email outbox and real SMTP configuration.
+- SMTP diagnostics and email event log.
+- Swedish default frontend with optional English.
 
 ## Safe configuration
 
-Keep real secrets only in `.env`. Never commit `.env`, `reservations.db`, or `email_outbox/`.
-
-Local email mode:
-
-```text
-EMAIL_MODE=outbox
-```
-
-Real SMTP mode:
-
-```text
-EMAIL_MODE=smtp
-```
-
-Restart Flask after changing `.env`.
+Keep real secrets only in `.env`. Never commit `.env`, `reservations.db`, `email_outbox/`, or `.venv/`.
 
 ## Run
-
-With the project's virtual environment active:
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -61,14 +42,14 @@ Website: `http://127.0.0.1:5000`
 
 Admin: `http://127.0.0.1:5000/admin`
 
-## Recommended V8 fixed test
+## Recommended V9 test
 
-1. Open Admin and verify the four dashboard cards.
-2. Search by part of a reservation reference.
-3. Search by customer name, phone number, and email.
-4. Combine search with status or date filters.
-5. Verify status badges change when a reservation is confirmed, pending, or cancelled.
-6. Confirm V7 capacity overview still works for a selected future date.
-7. Confirm the customer booking form still supports up to 20 guests.
+1. Open Admin and click **+ Ny manuell bokning**.
+2. Create a future booking without sending customer email.
+3. Confirm it appears in the table and capacity overview.
+4. Click **Visa / redigera**, change guest count and add an internal admin note.
+5. Verify the note appears only in Admin.
+6. Cancel the reservation and verify capacity is restored.
+7. Fill the slot with another active booking, then try to reactivate the cancelled booking; V9 should block it if capacity is insufficient.
 
-V8 fixed is still a development/demo version. Production deployment should later add CSRF protection, stronger authentication, HTTPS configuration, rate limiting, backups, and managed secrets.
+V9 remains a development/demo version. Production deployment should later add CSRF protection, stronger authentication, HTTPS, rate limiting, backups and managed secrets.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import secrets
 import smtplib
 import sqlite3
 from datetime import date, datetime, timedelta
@@ -34,7 +35,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "demo1234")
 MAX_GUESTS_PER_SLOT = int(os.getenv("MAX_GUESTS_PER_SLOT", "20"))
 EMAIL_MODE = os.getenv("EMAIL_MODE", "outbox").strip().lower()
 
-# Email configuration. V7 preserves V5/V6 outbox and SMTP diagnostics.
+# Email configuration. V9 preserves the existing outbox and SMTP diagnostics.
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
@@ -100,6 +101,10 @@ def init_db() -> None:
             )
             """
         )
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(reservations)").fetchall()}
+        if "admin_note" not in columns:
+            conn.execute("ALTER TABLE reservations ADD COLUMN admin_note TEXT NOT NULL DEFAULT ''")
+
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_reservation_date_time ON reservations(reservation_date, reservation_time)"
         )
@@ -165,6 +170,79 @@ def slot_guest_total(raw_date: str, raw_time: str) -> int:
 
 def remaining_capacity(raw_date: str, raw_time: str) -> int:
     return max(0, MAX_GUESTS_PER_SLOT - slot_guest_total(raw_date, raw_time))
+
+
+def active_guest_total_excluding(raw_date: str, raw_time: str, reservation_id: int | None = None) -> int:
+    query = """
+        SELECT COALESCE(SUM(guests), 0) AS total
+        FROM reservations
+        WHERE reservation_date = ?
+          AND reservation_time = ?
+          AND status IN ('pending', 'confirmed')
+    """
+    params: list[object] = [raw_date, raw_time]
+    if reservation_id is not None:
+        query += " AND id != ?"
+        params.append(reservation_id)
+    with get_db() as conn:
+        row = conn.execute(query, params).fetchone()
+    return int(row["total"] or 0)
+
+
+def remaining_capacity_excluding(raw_date: str, raw_time: str, reservation_id: int | None = None) -> int:
+    return max(0, MAX_GUESTS_PER_SLOT - active_guest_total_excluding(raw_date, raw_time, reservation_id))
+
+
+def generate_admin_reference() -> str:
+    prefix = datetime.now().strftime("TR-%y%m%d-")
+    with get_db() as conn:
+        for _ in range(50):
+            suffix = f"{secrets.randbelow(10000):04d}"
+            reference = prefix + suffix
+            exists = conn.execute("SELECT 1 FROM reservations WHERE reference = ?", (reference,)).fetchone()
+            if not exists:
+                return reference
+    raise RuntimeError("Could not generate a unique reservation reference.")
+
+
+def validate_admin_reservation_form(data, reservation_id: int | None = None) -> tuple[dict | None, str | None]:
+    cleaned = {
+        "name": str(data.get("name", "")).strip(),
+        "phone": str(data.get("phone", "")).strip(),
+        "email": str(data.get("email", "")).strip().lower(),
+        "reservation_date": str(data.get("reservation_date", "")).strip(),
+        "reservation_time": str(data.get("reservation_time", "")).strip(),
+        "special_requests": str(data.get("special_requests", "")).strip(),
+        "admin_note": str(data.get("admin_note", "")).strip(),
+        "language": "en" if str(data.get("language", "sv")).lower().startswith("en") else "sv",
+        "status": str(data.get("status", "pending")).strip().lower(),
+    }
+    try:
+        cleaned["guests"] = int(data.get("guests", 0))
+    except (TypeError, ValueError):
+        return None, "Antal gäster måste vara ett heltal."
+
+    if not all([cleaned["name"], cleaned["phone"], cleaned["email"], cleaned["reservation_date"], cleaned["reservation_time"]]):
+        return None, "Namn, telefon, email, datum och tid måste fyllas i."
+    if not EMAIL_RE.match(cleaned["email"]):
+        return None, "Ogiltig emailadress."
+    digits = re.sub(r"\D", "", cleaned["phone"])
+    if not (7 <= len(digits) <= 15):
+        return None, "Ogiltigt telefonnummer."
+    if not (1 <= cleaned["guests"] <= MAX_GUESTS_PER_SLOT):
+        return None, f"Antal gäster måste vara mellan 1 och {MAX_GUESTS_PER_SLOT}."
+    if cleaned["status"] not in {"pending", "confirmed", "cancelled"}:
+        return None, "Ogiltig status."
+    if not valid_slot(cleaned["reservation_date"], cleaned["reservation_time"]):
+        return None, "Valt datum eller tid ligger utanför restaurangens öppettider."
+
+    if cleaned["status"] in {"pending", "confirmed"}:
+        remaining = remaining_capacity_excluding(
+            cleaned["reservation_date"], cleaned["reservation_time"], reservation_id
+        )
+        if cleaned["guests"] > remaining:
+            return None, f"Inte tillräcklig kapacitet. Endast {remaining} platser återstår för den tiden."
+    return cleaned, None
 
 
 def opening_slots(raw_date: str) -> list[str]:
@@ -882,6 +960,90 @@ def admin():
     )
 
 
+@app.route("/admin/reservations/new", methods=["GET", "POST"])
+@admin_required
+def admin_new_reservation():
+    form_data = {
+        "name": "", "phone": "", "email": "", "guests": 2,
+        "reservation_date": date.today().isoformat(), "reservation_time": "18:00",
+        "special_requests": "", "admin_note": "", "language": "sv", "status": "pending",
+    }
+    if request.method == "POST":
+        form_data.update(request.form.to_dict())
+        cleaned, error = validate_admin_reservation_form(request.form)
+        if error:
+            flash(error, "error")
+        else:
+            reference = generate_admin_reference()
+            with get_db() as conn:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO reservations (
+                        reference, created_at, name, phone, email, guests,
+                        reservation_date, reservation_time, special_requests,
+                        selected_dish_name_sv, selected_dish_name_en, selected_dish_price,
+                        language, status, admin_note
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', ?, ?, ?)
+                    """,
+                    (reference, datetime.now().isoformat(timespec="seconds"), cleaned["name"],
+                     cleaned["phone"], cleaned["email"], cleaned["guests"], cleaned["reservation_date"],
+                     cleaned["reservation_time"], cleaned["special_requests"], cleaned["language"],
+                     cleaned["status"], cleaned["admin_note"]),
+                )
+                reservation_id = cursor.lastrowid
+                reservation = conn.execute("SELECT * FROM reservations WHERE id = ?", (reservation_id,)).fetchone()
+            if request.form.get("send_email") == "1":
+                subject, body = customer_received_email(reservation)
+                ok, message = send_email(reservation["email"], subject, body, reservation_id, "admin_created")
+                flash(f"Bokning {reference} skapad. {message}", "success" if ok else "error")
+            else:
+                flash(f"Bokning {reference} skapad utan kundmail.", "success")
+            return redirect(url_for("admin", overview_date=cleaned["reservation_date"]))
+
+    return render_template("admin_reservation_form.html", mode="new", reservation=form_data,
+                           max_guests_per_slot=MAX_GUESTS_PER_SLOT, status_sv=STATUS_SV)
+
+
+@app.route("/admin/reservations/<int:reservation_id>/edit", methods=["GET", "POST"])
+@admin_required
+def admin_edit_reservation(reservation_id: int):
+    with get_db() as conn:
+        reservation = conn.execute("SELECT * FROM reservations WHERE id = ?", (reservation_id,)).fetchone()
+    if reservation is None:
+        return "Reservation not found", 404
+
+    form_data = dict(reservation)
+    if request.method == "POST":
+        form_data.update(request.form.to_dict())
+        cleaned, error = validate_admin_reservation_form(request.form, reservation_id)
+        if error:
+            flash(error, "error")
+        else:
+            with get_db() as conn:
+                conn.execute(
+                    """
+                    UPDATE reservations
+                    SET name = ?, phone = ?, email = ?, guests = ?, reservation_date = ?,
+                        reservation_time = ?, special_requests = ?, language = ?, status = ?, admin_note = ?
+                    WHERE id = ?
+                    """,
+                    (cleaned["name"], cleaned["phone"], cleaned["email"], cleaned["guests"],
+                     cleaned["reservation_date"], cleaned["reservation_time"], cleaned["special_requests"],
+                     cleaned["language"], cleaned["status"], cleaned["admin_note"], reservation_id),
+                )
+                updated = conn.execute("SELECT * FROM reservations WHERE id = ?", (reservation_id,)).fetchone()
+            if request.form.get("send_email") == "1":
+                subject, body = customer_status_email(updated, updated["status"])
+                ok, message = send_email(updated["email"], subject, body, reservation_id, "admin_edited")
+                flash(f"Bokning {updated['reference']} uppdaterad. {message}", "success" if ok else "error")
+            else:
+                flash(f"Bokning {updated['reference']} uppdaterad utan kundmail.", "success")
+            return redirect(url_for("admin", overview_date=cleaned["reservation_date"], q=updated["reference"]))
+
+    return render_template("admin_reservation_form.html", mode="edit", reservation=form_data,
+                           max_guests_per_slot=MAX_GUESTS_PER_SLOT, status_sv=STATUS_SV)
+
+
 @app.post("/admin/reservations/<int:reservation_id>/status")
 @admin_required
 def update_status(reservation_id: int):
@@ -904,6 +1066,17 @@ def update_status(reservation_id: int):
                 "info",
             )
             return redirect(request.referrer or url_for("admin"))
+
+        if old_status == "cancelled" and status in {"pending", "confirmed"}:
+            remaining = remaining_capacity_excluding(
+                reservation["reservation_date"], reservation["reservation_time"], reservation_id
+            )
+            if int(reservation["guests"]) > remaining:
+                flash(
+                    f"Kan inte återaktivera {reservation['reference']}: endast {remaining} platser återstår på tiden.",
+                    "error",
+                )
+                return redirect(request.referrer or url_for("admin"))
 
         conn.execute(
             "UPDATE reservations SET status = ? WHERE id = ?",
@@ -956,9 +1129,9 @@ def admin_email_test():
 
     ok, message = send_email(
         recipient=recipient,
-        subject="Test Restaurant – Backend V8 testmail",
+        subject="Test Restaurant – Backend V9 testmail",
         body=(
-            "Detta är ett testmail från Test Restaurant Backend V8.\n\n"
+            "Detta är ett testmail från Test Restaurant Backend V9.\n\n"
             f"Email-läge: {email_mode()}\n"
             f"Skickat: {datetime.now().isoformat(timespec='seconds')}\n"
         ),
@@ -976,7 +1149,7 @@ def health():
         {
             "ok": True,
             "database": DB_PATH.name,
-            "backend_version": "V8-fixed",
+            "backend_version": "V9",
             "max_guests_per_slot": MAX_GUESTS_PER_SLOT,
             "email_mode": email_mode(),
             "restaurant_email": RESTAURANT_EMAIL,

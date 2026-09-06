@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ 'Ny bokning' if mode == 'new' else 'Redigera bokning' }} – Test Restaurant Admin</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f4f1eb;color:#171717;font-family:Arial,sans-serif}header{background:#171717;color:#fff;padding:18px}.wrap,main{max-width:900px;margin:auto}header .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px}header a{color:#fff}main{padding:28px 18px 60px}.card{background:#fff;border:1px solid #ddd5c9;border-radius:16px;padding:22px;box-shadow:0 10px 28px rgba(0,0,0,.04)}h1{margin-top:0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.full{grid-column:1/-1}label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px}input,select,textarea{width:100%;padding:11px 12px;border:1px solid #cfc7ba;border-radius:9px;font:inherit;background:#fff}textarea{min-height:110px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.btn,button{border:1px solid #222;border-radius:8px;padding:10px 14px;background:#fff;color:#171717;text-decoration:none;cursor:pointer;font-weight:700}.primary{background:#171717;color:#fff}.flash{white-space:pre-line;padding:12px 14px;border-radius:10px;margin-bottom:14px;border:1px solid #ddd}.flash.success{background:#edf8ef;border-color:#b9dfc0}.flash.error{background:#fff0f0;border-color:#efb0b0}.hint{font-size:12px;opacity:.67;margin-top:4px}.check{flex-direction:row;align-items:center;font-weight:600}.check input{width:auto}@media(max-width:680px){.grid{grid-template-columns:1fr}.full{grid-column:auto}}
+  </style>
+</head>
+<body>
+<header><div class="wrap"><div><strong>Test Restaurant – Admin</strong><br><small>Backend V9</small></div><a href="/admin">← Till Admin</a></div></header>
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
+  <div class="card">
+    <h1>{{ 'Ny manuell bokning' if mode == 'new' else 'Redigera bokning ' ~ reservation.reference }}</h1>
+    <p>{{ 'Skapa en bokning som restaurangpersonalen lägger in manuellt.' if mode == 'new' else 'Ändra kunduppgifter, datum, tid, gäster, status och interna anteckningar.' }}</p>
+    <form method="post">
+      <div class="grid">
+        <label>Namn<input name="name" value="{{ reservation.name or '' }}" required></label>
+        <label>Telefon<input name="phone" value="{{ reservation.phone or '' }}" required></label>
+        <label>Email<input type="email" name="email" value="{{ reservation.email or '' }}" required></label>
+        <label>Antal gäster<select name="guests" required>{% for n in range(1, max_guests_per_slot + 1) %}<option value="{{ n }}" {% if reservation.guests|int == n %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+        <label>Datum<input type="date" name="reservation_date" value="{{ reservation.reservation_date or '' }}" required></label>
+        <label>Tid<input type="time" step="1800" name="reservation_time" value="{{ reservation.reservation_time or '' }}" required><span class="hint">Endast tider inom öppettiderna och i 30-minuterssteg godkänns.</span></label>
+        <label>Status<select name="status"><option value="pending" {% if reservation.status == 'pending' %}selected{% endif %}>Väntar</option><option value="confirmed" {% if reservation.status == 'confirmed' %}selected{% endif %}>Bekräftad</option><option value="cancelled" {% if reservation.status == 'cancelled' %}selected{% endif %}>Avbokad</option></select></label>
+        <label>Språk<select name="language"><option value="sv" {% if reservation.language != 'en' %}selected{% endif %}>Svenska</option><option value="en" {% if reservation.language == 'en' %}selected{% endif %}>English</option></select></label>
+        <label class="full">Kundens önskemål<textarea name="special_requests">{{ reservation.special_requests or '' }}</textarea></label>
+        <label class="full">Intern adminnotering<textarea name="admin_note" placeholder="Syns bara i Admin">{{ reservation.admin_note or '' }}</textarea></label>
+        <label class="full check"><input type="checkbox" name="send_email" value="1"> Skicka kundmail efter att bokningen sparats</label>
+      </div>
+      <div class="actions"><button class="primary" type="submit">{{ 'Skapa bokning' if mode == 'new' else 'Spara ändringar' }}</button><a class="btn" href="/admin">Avbryt</a></div>
+    </form>
+  </div>
+</main>
+</body>
+</html>
