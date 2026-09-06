@@ -25,12 +25,13 @@
     button.confirm,.btn.primary{background:#171717;color:white}.empty{text-align:center;padding:48px 20px}.note{font-size:12px;opacity:.65;margin-top:18px}
     .flash{white-space:pre-line;padding:12px 14px;border-radius:10px;margin-bottom:14px;border:1px solid #ddd}.flash.success{background:#edf8ef;border-color:#b9dfc0}.flash.error{background:#fff0f0;border-color:#efb0b0}.flash.info{background:#eef5ff;border-color:#b9d4ef}
     h2{margin-top:32px}.email-mode{font-weight:800}.small-table table{min-width:760px}.delivery-sent,.delivery-saved{font-weight:800}.delivery-failed{font-weight:800;color:#9a1f1f}
+    .capacity-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0 24px}.capacity-card{background:white;border:1px solid #ddd5c9;border-radius:12px;padding:12px}.capacity-card strong{display:block;font-size:17px;margin-bottom:5px}.capacity-card small{display:block;opacity:.72}.capacity-full{border-color:#e1aaaa;background:#fff5f5}.capacity-low{border-color:#e3c77a;background:#fffaf0}.capacity-available{border-color:#b8d8bd;background:#f5fbf6}
   </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V6 · SQLite · live kapacitet · SMTP-diagnostik</small></div>
+    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V7 · SQLite · kapacitetsöversikt · SMTP-diagnostik</small></div>
     <div><a href="/">← Webbplats</a>&nbsp;&nbsp;<form method="post" action="/admin/logout"><button type="submit">Logga ut</button></form></div>
   </div>
 </header>
@@ -42,7 +43,7 @@
   <div class="summary">
     <div class="pill">Visade bokningar: <strong>{{ reservations|length }}</strong></div>
   <div class="flash info">
-    <strong>V6 email- och SMTP-test:</strong>
+    <strong>V7 email- och SMTP-test:</strong>
     <form method="post" action="/admin/email-test" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px">
       <label style="display:flex;flex-direction:column;gap:5px">
         Testmottagare
@@ -63,6 +64,31 @@
 
   {% if email_mode != 'smtp' %}
     <div class="flash info"><strong>Testläge:</strong> Emails skickas inte ut på internet ännu. De sparas som <code>.eml</code>-filer i mappen <code>email_outbox</code>. När SMTP konfigureras skickas samma meddelanden till riktiga emailadresser.</div>
+  {% endif %}
+
+  <h2>Kapacitetsöversikt – {{ overview_date }}</h2>
+  <form class="filters" method="get" action="/admin" style="margin-bottom:14px">
+    <label>Kapacitetsdatum<input type="date" name="overview_date" value="{{ overview_date }}"></label>
+    <button class="btn primary" type="submit">Visa kapacitet</button>
+    <a class="btn" href="/admin">Idag</a>
+  </form>
+  {% if capacity_overview %}
+    <div class="summary">
+      <div class="pill">Aktiva gäster över dagens tider: <strong>{{ overview_booked }}</strong></div>
+      <div class="pill">Lediga platser över dagens tider: <strong>{{ overview_remaining }}</strong></div>
+    </div>
+    <div class="capacity-grid">
+      {% for slot in capacity_overview %}
+        <div class="capacity-card capacity-{{ slot.level }}">
+          <strong>{{ slot.time }}</strong>
+          <small>Bokade: {{ slot.booked }} / {{ slot.max_capacity }}</small>
+          <small>Kvar: {{ slot.remaining }}</small>
+          <small>{% if slot.level == 'full' %}Fullbokad{% elif slot.level == 'low' %}Få platser kvar{% else %}Ledig{% endif %}</small>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="flash info">Restaurangen är stängd eller datumet saknar bokningsbara tider.</div>
   {% endif %}
 
   <form class="filters" method="get" action="/admin">
@@ -95,7 +121,7 @@
     </tbody></table>{% else %}<div class="empty">Inga email-händelser ännu.</div>{% endif %}
   </div>
 
-  <p class="note">Backend V6 behåller SMTP-diagnostiken från V5 och lägger till live kapacitetskontroll i bokningsformuläret.</p>
+  <p class="note">Backend V7 behåller V6 live kapacitetskontroll och lägger till en tydlig kapacitetsöversikt i Admin samt upp till 20 gäster i bokningsformuläret.</p>
 </main>
 </body>
 </html>

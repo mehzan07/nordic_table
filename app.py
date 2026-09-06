@@ -34,7 +34,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "demo1234")
 MAX_GUESTS_PER_SLOT = int(os.getenv("MAX_GUESTS_PER_SLOT", "20"))
 EMAIL_MODE = os.getenv("EMAIL_MODE", "outbox").strip().lower()
 
-# Email configuration. V6 preserves V5 local outbox plus step-by-step SMTP diagnostics.
+# Email configuration. V7 preserves V5/V6 outbox and SMTP diagnostics.
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
@@ -191,6 +191,48 @@ def opening_slots(raw_date: str) -> list[str]:
         slots.append(cursor.strftime("%H:%M"))
         cursor += timedelta(minutes=30)
     return slots
+
+
+def capacity_overview(raw_date: str) -> list[dict]:
+    """Return booked and remaining seats for every opening slot on a date."""
+    slots = opening_slots(raw_date)
+    if not slots:
+        return []
+
+    totals: dict[str, int] = {}
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT reservation_time, COALESCE(SUM(guests), 0) AS total
+            FROM reservations
+            WHERE reservation_date = ?
+              AND status IN ('pending', 'confirmed')
+            GROUP BY reservation_time
+            """,
+            (raw_date,),
+        ).fetchall()
+        totals = {row["reservation_time"]: int(row["total"] or 0) for row in rows}
+
+    result: list[dict] = []
+    for slot in slots:
+        booked = totals.get(slot, 0)
+        remaining = max(0, MAX_GUESTS_PER_SLOT - booked)
+        if remaining == 0:
+            level = "full"
+        elif remaining <= 4:
+            level = "low"
+        else:
+            level = "available"
+        result.append(
+            {
+                "time": slot,
+                "booked": booked,
+                "remaining": remaining,
+                "max_capacity": MAX_GUESTS_PER_SLOT,
+                "level": level,
+            }
+        )
+    return result
 
 
 def validate_payload(data: dict) -> str | None:
@@ -761,6 +803,7 @@ def admin_logout():
 def admin():
     status_filter = request.args.get("status", "").strip().lower()
     date_filter = request.args.get("date", "").strip()
+    overview_date_filter = request.args.get("overview_date", "").strip()
 
     query = "SELECT * FROM reservations WHERE 1=1"
     params: list[str] = []
@@ -785,6 +828,11 @@ def admin():
             """
         ).fetchall()
 
+    overview_date = overview_date_filter or date.today().isoformat()
+    overview = capacity_overview(overview_date)
+    overview_booked = sum(item["booked"] for item in overview)
+    overview_remaining = sum(item["remaining"] for item in overview)
+
     return render_template(
         "admin.html",
         reservations=rows,
@@ -794,6 +842,11 @@ def admin():
         max_guests_per_slot=MAX_GUESTS_PER_SLOT,
         status_filter=status_filter,
         date_filter=date_filter,
+        overview_date_filter=overview_date_filter,
+        overview_date=overview_date,
+        capacity_overview=overview,
+        overview_booked=overview_booked,
+        overview_remaining=overview_remaining,
     )
 
 
@@ -871,9 +924,9 @@ def admin_email_test():
 
     ok, message = send_email(
         recipient=recipient,
-        subject="Test Restaurant – Backend V6 testmail",
+        subject="Test Restaurant – Backend V7 testmail",
         body=(
-            "Detta är ett testmail från Test Restaurant Backend V6.\n\n"
+            "Detta är ett testmail från Test Restaurant Backend V7.\n\n"
             f"Email-läge: {email_mode()}\n"
             f"Skickat: {datetime.now().isoformat(timespec='seconds')}\n"
         ),
@@ -891,7 +944,7 @@ def health():
         {
             "ok": True,
             "database": DB_PATH.name,
-            "backend_version": "V6",
+            "backend_version": "V7",
             "max_guests_per_slot": MAX_GUESTS_PER_SLOT,
             "email_mode": email_mode(),
             "restaurant_email": RESTAURANT_EMAIL,

@@ -1,8 +1,8 @@
-# Test Restaurant – Backend V6
+# Test Restaurant – Backend V7
 
-Backend V6 preserves all V5 features and adds live, capacity-aware reservation times to the customer booking form.
+Backend V7 preserves all V5 features and adds live, capacity-aware reservation times to the customer booking form.
 
-## New in V6
+## New in V7
 
 - The reservation form checks the backend for the selected day's current capacity.
 - Time options display remaining seats, for example `19:30 — 6 platser kvar`.
@@ -12,7 +12,7 @@ Backend V6 preserves all V5 features and adds live, capacity-aware reservation t
 - The existing server-side capacity check remains authoritative, so a booking is still rejected if another customer fills the slot before save.
 - `GET /api/availability?date=YYYY-MM-DD` now returns all opening-hour slots for that date in one request.
 - The older single-slot API remains supported: `GET /api/availability?date=YYYY-MM-DD&time=HH:MM`.
-- Health endpoint reports Backend V6.
+- Health endpoint reports Backend V7.
 
 ## V5 features retained
 
@@ -56,7 +56,7 @@ Website: `http://127.0.0.1:5000`
 
 Admin: `http://127.0.0.1:5000/admin`
 
-## Recommended V6 test
+## Recommended V7 test
 
 1. Start Flask and open the restaurant website.
 2. Select a future date. The time list should show remaining seats.
@@ -64,6 +64,6 @@ Admin: `http://127.0.0.1:5000/admin`
 4. Create a reservation and confirm that it appears in Admin.
 5. Return to the same date and verify that the remaining capacity has decreased.
 6. Cancel the reservation in Admin and verify that the capacity becomes available again after refreshing/reselecting the date.
-7. SMTP can remain in outbox mode while testing V6 availability; Yahoo SMTP is not required for this feature.
+7. SMTP can remain in outbox mode while testing V7 availability; Yahoo SMTP is not required for this feature.
 
-V6 is still a development/demo version. Production deployment should later add CSRF protection, stronger authentication, HTTPS configuration, rate limiting and managed secrets.
+V7 is still a development/demo version. Production deployment should later add CSRF protection, stronger authentication, HTTPS configuration, rate limiting and managed secrets.
