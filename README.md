@@ -1,37 +1,21 @@
-# Test Restaurant – Backend V9
+# Test Restaurant – Backend V10 Final
 
-Backend V9 preserves all tested V8 features and adds a faster restaurant-admin workflow.
+Backend V10 is the final consolidated demo/deployment-ready checkpoint built on the tested V9 reservation system.
 
-## New in V9
+## What V10 includes
 
-- Create a reservation manually from Admin with **+ Ny manuell bokning**.
-- Edit existing reservations with **Visa / redigera**.
-- Edit customer name, phone, email, guest count, date, time, status, language and special requests.
-- Add a private **Intern adminnotering** stored in SQLite and shown only in Admin.
-- Optional customer email when an admin creates or edits a reservation.
-- Capacity validation applies to manual creation and editing.
-- Reactivating a cancelled reservation is blocked if the time no longer has enough seats.
-- SQLite migration automatically adds the `admin_note` column to existing databases.
-- Health endpoint reports Backend V9.
+- Everything tested in V9: customer booking, Swedish/English frontend, live remaining-seat availability, server-side overbooking protection, admin login, dashboard, date/status/search filters, capacity overview, manual admin bookings, edit reservation, internal notes, status workflow and email/outbox support.
+- **Admin CSRF protection** on login, logout, status changes, SMTP actions and admin create/edit forms.
+- Security response headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`; HSTS in production mode).
+- Safer admin-password comparison and secure cookie settings.
+- **CSV export** of the currently filtered reservation list.
+- **Admin audit history** for manual creation, edits, status changes and CSV exports.
+- Automatic SQLite migration for the audit table; existing `reservations.db` remains usable.
+- Production/deployment settings through `.env`.
+- `wsgi.py` and Gunicorn dependency for Linux hosting.
+- `/api/health` reports Backend V10 and runtime mode.
 
-## Features retained from V8
-
-- Admin dashboard statistics.
-- Search by reservation reference, customer name, phone or email.
-- Combined status/date/search filters.
-- Capacity overview for any selected date.
-- Live customer-side remaining-seat availability.
-- Server-side overbooking protection.
-- Pending / confirmed / cancelled statuses.
-- Local `.eml` email outbox and real SMTP configuration.
-- SMTP diagnostics and email event log.
-- Swedish default frontend with optional English.
-
-## Safe configuration
-
-Keep real secrets only in `.env`. Never commit `.env`, `reservations.db`, `email_outbox/`, or `.venv/`.
-
-## Run
+## Local run on Windows
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -42,14 +26,47 @@ Website: `http://127.0.0.1:5000`
 
 Admin: `http://127.0.0.1:5000/admin`
 
-## Recommended V9 test
+## Production-style Linux run
 
-1. Open Admin and click **+ Ny manuell bokning**.
-2. Create a future booking without sending customer email.
-3. Confirm it appears in the table and capacity overview.
-4. Click **Visa / redigera**, change guest count and add an internal admin note.
-5. Verify the note appears only in Admin.
-6. Cancel the reservation and verify capacity is restored.
-7. Fill the slot with another active booking, then try to reactivate the cancelled booking; V9 should block it if capacity is insufficient.
+Create a real `.env` with a strong `ADMIN_PASSWORD` and `SECRET_KEY`, use HTTPS, then set:
 
-V9 remains a development/demo version. Production deployment should later add CSRF protection, stronger authentication, HTTPS, rate limiting, backups and managed secrets.
+```text
+APP_ENV=production
+SESSION_COOKIE_SECURE=true
+```
+
+Run for example:
+
+```bash
+gunicorn --bind 0.0.0.0:8000 wsgi:app
+```
+
+Put a production web server / hosting platform with HTTPS in front of Gunicorn.
+
+## Final short test checklist
+
+1. Open the public website and create one normal booking.
+2. Open Admin, log in, confirm dashboard and capacity overview load.
+3. Create or edit one manual booking and verify capacity protection still works.
+4. Click **Exportera CSV** and verify a CSV downloads.
+5. Check **Senaste admin-händelser** contains the create/edit/status/export action.
+6. Open `/api/health` and verify `backend_version` is `V10`.
+
+## Files that must stay local
+
+Never commit or publish:
+
+- `.env`
+- `reservations.db`
+- `email_outbox/`
+- `.venv/`
+
+`.env.example` is safe to commit because it contains placeholders only.
+
+## Email note
+
+`EMAIL_MODE=outbox` is the safest demo mode. Real SMTP needs a provider-specific app password or SMTP credential. Keep those credentials only in `.env`.
+
+## Deployment note
+
+This V10 package is suitable as the final demo/development checkpoint. For a real restaurant taking customer data on the public internet, use HTTPS, strong credentials, managed backups, privacy/GDPR policies, monitoring, and a production hosting environment.

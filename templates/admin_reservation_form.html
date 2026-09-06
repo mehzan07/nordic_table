@@ -9,13 +9,13 @@
   </style>
 </head>
 <body>
-<header><div class="wrap"><div><strong>Test Restaurant – Admin</strong><br><small>Backend V9</small></div><a href="/admin">← Till Admin</a></div></header>
+<header><div class="wrap"><div><strong>Test Restaurant – Admin</strong><br><small>Backend V10</small></div><a href="/admin">← Till Admin</a></div></header>
 <main>
   {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
   <div class="card">
     <h1>{{ 'Ny manuell bokning' if mode == 'new' else 'Redigera bokning ' ~ reservation.reference }}</h1>
     <p>{{ 'Skapa en bokning som restaurangpersonalen lägger in manuellt.' if mode == 'new' else 'Ändra kunduppgifter, datum, tid, gäster, status och interna anteckningar.' }}</p>
-    <form method="post">
+    <form method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <div class="grid">
         <label>Namn<input name="name" value="{{ reservation.name or '' }}" required></label>
         <label>Telefon<input name="phone" value="{{ reservation.phone or '' }}" required></label>

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import os
 import re
 import secrets
@@ -14,6 +16,7 @@ from dotenv import load_dotenv
 
 from flask import (
     Flask,
+    Response,
     flash,
     jsonify,
     redirect,
@@ -30,6 +33,13 @@ OUTBOX_DIR = BASE_DIR / "email_outbox"
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-me")
+APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true" if APP_ENV == "production" else "false").lower() in {"1", "true", "yes", "on"}
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=SESSION_COOKIE_SECURE,
+)
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "demo1234")
 MAX_GUESTS_PER_SLOT = int(os.getenv("MAX_GUESTS_PER_SLOT", "20"))
@@ -126,6 +136,64 @@ def init_db() -> None:
                 FOREIGN KEY(reservation_id) REFERENCES reservations(id)
             )
             """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS audit_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                action TEXT NOT NULL,
+                reservation_id INTEGER,
+                reference TEXT NOT NULL DEFAULT '',
+                detail TEXT NOT NULL DEFAULT '',
+                FOREIGN KEY(reservation_id) REFERENCES reservations(id)
+            )
+            """
+        )
+
+
+
+def csrf_token() -> str:
+    token = session.get("_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": csrf_token}
+
+
+@app.before_request
+def protect_admin_post_requests():
+    if request.method == "POST" and request.path.startswith("/admin"):
+        expected = session.get("_csrf_token", "")
+        provided = request.form.get("_csrf_token", "")
+        if not expected or not provided or not secrets.compare_digest(str(expected), str(provided)):
+            return "Ogiltig eller saknad säkerhetstoken. Ladda om sidan och försök igen.", 400
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if APP_ENV == "production":
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
+
+
+def log_audit(action: str, reservation_id: int | None = None, reference: str = "", detail: str = "") -> None:
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO audit_events (created_at, action, reservation_id, reference, detail)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (datetime.now().isoformat(timespec="seconds"), action, reservation_id, reference, detail[:1000]),
         )
 
 
@@ -862,7 +930,7 @@ def availability():
 def admin_login():
     if request.method == "POST":
         password = request.form.get("password", "")
-        if password == ADMIN_PASSWORD:
+        if secrets.compare_digest(password, ADMIN_PASSWORD):
             session["admin_logged_in"] = True
             return redirect(url_for("admin"))
         flash("Fel lösenord.", "error")
@@ -932,6 +1000,13 @@ def admin():
             LIMIT 20
             """
         ).fetchall()
+        audit_rows = conn.execute(
+            """
+            SELECT * FROM audit_events
+            ORDER BY created_at DESC, id DESC
+            LIMIT 20
+            """
+        ).fetchall()
 
     overview_date = overview_date_filter or date.today().isoformat()
     overview = capacity_overview(overview_date)
@@ -942,6 +1017,7 @@ def admin():
         "admin.html",
         reservations=rows,
         email_events=email_rows,
+        audit_events=audit_rows,
         email_mode=email_mode(),
         restaurant_email=RESTAURANT_EMAIL,
         max_guests_per_slot=MAX_GUESTS_PER_SLOT,
@@ -957,6 +1033,46 @@ def admin():
         capacity_overview=overview,
         overview_booked=overview_booked,
         overview_remaining=overview_remaining,
+    )
+
+
+@app.get("/admin/export.csv")
+@admin_required
+def admin_export_csv():
+    status_filter = request.args.get("status", "").strip().lower()
+    date_filter = request.args.get("reservation_date", request.args.get("date", "")).strip()
+    search_filter = request.args.get("q", "").strip()
+
+    query = "SELECT * FROM reservations WHERE 1=1"
+    params: list[str] = []
+    if status_filter in {"pending", "confirmed", "cancelled"}:
+        query += " AND status = ?"
+        params.append(status_filter)
+    if date_filter:
+        query += " AND reservation_date = ?"
+        params.append(date_filter)
+    if search_filter:
+        like = f"%{search_filter}%"
+        query += " AND (reference LIKE ? OR name LIKE ? OR phone LIKE ? OR email LIKE ?)"
+        params.extend([like, like, like, like])
+    query += " ORDER BY reservation_date ASC, reservation_time ASC, created_at DESC"
+
+    with get_db() as conn:
+        rows = conn.execute(query, params).fetchall()
+
+    output = io.StringIO()
+    output.write("\ufeff")  # Excel-friendly UTF-8 BOM
+    writer = csv.writer(output)
+    writer.writerow(["reference", "date", "time", "guests", "name", "phone", "email", "status", "language", "special_requests", "admin_note", "created_at"])
+    for r in rows:
+        writer.writerow([r["reference"], r["reservation_date"], r["reservation_time"], r["guests"], r["name"], r["phone"], r["email"], r["status"], r["language"], r["special_requests"], r["admin_note"], r["created_at"]])
+
+    filename = f"reservations-{date.today().isoformat()}.csv"
+    log_audit("csv_export", detail=f"Exporterade {len(rows)} bokningar till CSV")
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -992,6 +1108,7 @@ def admin_new_reservation():
                 )
                 reservation_id = cursor.lastrowid
                 reservation = conn.execute("SELECT * FROM reservations WHERE id = ?", (reservation_id,)).fetchone()
+            log_audit("reservation_created", reservation_id, reference, f"Manuell adminbokning skapad: {cleaned['guests']} gäster {cleaned['reservation_date']} {cleaned['reservation_time']} status={cleaned['status']}")
             if request.form.get("send_email") == "1":
                 subject, body = customer_received_email(reservation)
                 ok, message = send_email(reservation["email"], subject, body, reservation_id, "admin_created")
@@ -1032,6 +1149,7 @@ def admin_edit_reservation(reservation_id: int):
                      cleaned["language"], cleaned["status"], cleaned["admin_note"], reservation_id),
                 )
                 updated = conn.execute("SELECT * FROM reservations WHERE id = ?", (reservation_id,)).fetchone()
+            log_audit("reservation_edited", reservation_id, updated["reference"], f"Admin redigerade bokningen: {updated['guests']} gäster {updated['reservation_date']} {updated['reservation_time']} status={updated['status']}")
             if request.form.get("send_email") == "1":
                 subject, body = customer_status_email(updated, updated["status"])
                 ok, message = send_email(updated["email"], subject, body, reservation_id, "admin_edited")
@@ -1086,6 +1204,7 @@ def update_status(reservation_id: int):
             "SELECT * FROM reservations WHERE id = ?", (reservation_id,)
         ).fetchone()
 
+    log_audit("status_changed", reservation_id, reservation["reference"], f"Status ändrad från {old_status} till {status}")
     subject, body = customer_status_email(reservation, status)
     email_ok, email_message = send_email(
         recipient=reservation["email"],
@@ -1129,9 +1248,9 @@ def admin_email_test():
 
     ok, message = send_email(
         recipient=recipient,
-        subject="Test Restaurant – Backend V9 testmail",
+        subject="Test Restaurant – Backend V10 testmail",
         body=(
-            "Detta är ett testmail från Test Restaurant Backend V9.\n\n"
+            "Detta är ett testmail från Test Restaurant Backend V10.\n\n"
             f"Email-läge: {email_mode()}\n"
             f"Skickat: {datetime.now().isoformat(timespec='seconds')}\n"
         ),
@@ -1149,14 +1268,16 @@ def health():
         {
             "ok": True,
             "database": DB_PATH.name,
-            "backend_version": "V9",
+            "backend_version": "V10",
             "max_guests_per_slot": MAX_GUESTS_PER_SLOT,
             "email_mode": email_mode(),
             "restaurant_email": RESTAURANT_EMAIL,
+            "app_env": APP_ENV,
+            "session_cookie_secure": SESSION_COOKIE_SECURE,
         }
     )
 
 
 if __name__ == "__main__":
     init_db()
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes", "on"})

@@ -21,12 +21,12 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}<div class="{{ category }}">{{ message }}</div>{% endfor %}
     {% endwith %}
-    <form method="post">
+    <form method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <label for="password">Admin-lösenord</label>
       <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
       <button type="submit">Logga in</button>
     </form>
-    <p class="hint">Lokal demo: standardlösenord <strong>demo1234</strong>. Ändra ADMIN_PASSWORD före publicering.</p>
+    <p class="hint">Lokal demo kan använda demo-lösenord. Sätt ett starkt ADMIN_PASSWORD och SECRET_KEY i .env före publicering.</p>
     <p><a href="/">← Till restaurangens webbplats</a></p>
   </main>
 </body>

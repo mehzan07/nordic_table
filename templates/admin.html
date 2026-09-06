@@ -32,8 +32,8 @@
 <body>
 <header>
   <div class="wrap">
-    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V9 · SQLite · adminbokning · redigering · dashboard · kapacitet</small></div>
-    <div><a href="/">← Webbplats</a>&nbsp;&nbsp;<form method="post" action="/admin/logout"><button type="submit">Logga ut</button></form></div>
+    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V10 · final · säker admin · export · historik · kapacitet</small></div>
+    <div><a href="/">← Webbplats</a>&nbsp;&nbsp;<form method="post" action="/admin/logout"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button type="submit">Logga ut</button></form></div>
   </div>
 </header>
 <main>
@@ -53,16 +53,17 @@
   <div class="summary">
     <div class="pill">Visade bokningar: <strong>{{ reservations|length }}</strong></div>
     <a class="btn primary" href="/admin/reservations/new">+ Ny manuell bokning</a>
+    <a class="btn" href="{{ url_for('admin_export_csv', q=search_filter, status=status_filter, reservation_date=date_filter) }}">Exportera CSV</a>
   <div class="flash info">
-    <strong>V8 email- och SMTP-test:</strong>
-    <form method="post" action="/admin/email-test" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px">
+    <strong>Email- och SMTP-test:</strong>
+    <form method="post" action="/admin/email-test" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <label style="display:flex;flex-direction:column;gap:5px">
         Testmottagare
         <input type="email" name="recipient" value="{{ restaurant_email }}" required>
       </label>
       <button class="btn primary" type="submit">Skicka testmail</button>
     </form>
-    <form method="post" action="/admin/smtp-diagnostic" style="margin-top:10px">
+    <form method="post" action="/admin/smtp-diagnostic" style="margin-top:10px"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <button class="btn" type="submit">Kör SMTP-diagnostik</button>
       <small style="margin-left:8px">Testar anslutning, EHLO, STARTTLS och inloggning utan att skicka email.</small>
     </form>
@@ -125,7 +126,7 @@
       <td class="ref">{{ r.reference }}</td><td>{{ r.reservation_date }}</td><td>{{ r.reservation_time }}</td><td>{{ r.guests }}</td><td>{{ r.name }}</td><td>{{ r.phone }}<br>{{ r.email }}</td>
       <td class="dish">{% if r.selected_dish_name_sv %}{{ r.selected_dish_name_sv }}{% if r.selected_dish_price %} – {{ r.selected_dish_price }}{% endif %}{% else %}—{% endif %}</td>
       <td>{{ r.special_requests or '—' }}</td><td>{{ r.admin_note or '—' }}</td><td class="status"><span class="status-badge status-{{ r.status }}">{% if r.status == 'pending' %}Väntar{% elif r.status == 'confirmed' %}Bekräftad{% else %}Avbokad{% endif %}</span></td>
-      <td><div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn" href="/admin/reservations/{{ r.id }}/edit">Visa / redigera</a><form class="actions" method="post" action="/admin/reservations/{{ r.id }}/status">
+      <td><div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn" href="/admin/reservations/{{ r.id }}/edit">Visa / redigera</a><form class="actions" method="post" action="/admin/reservations/{{ r.id }}/status"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button class="confirm" name="status" value="confirmed" {% if r.status=='confirmed' %}disabled title="Redan bekräftad"{% endif %}>Bekräfta</button>
         <button name="status" value="pending" {% if r.status=='pending' %}disabled title="Redan väntande"{% endif %}>Väntar</button>
         <button name="status" value="cancelled" {% if r.status=='cancelled' %}disabled title="Redan avbokad"{% endif %}>Avboka</button>
@@ -142,7 +143,15 @@
     </tbody></table>{% else %}<div class="empty">Inga email-händelser ännu.</div>{% endif %}
   </div>
 
-  <p class="note">Backend V9 behåller V8 och lägger till manuella adminbokningar, redigering, adminnoteringar och extra kapacitetsskydd när avbokade bokningar återaktiveras.</p>
+
+  <h2>Senaste admin-händelser</h2>
+  <div class="table-wrap small-table">
+    {% if audit_events %}<table><thead><tr><th>Tid</th><th>Åtgärd</th><th>Referens</th><th>Detalj</th></tr></thead><tbody>
+    {% for e in audit_events %}<tr><td>{{ e.created_at }}</td><td>{{ e.action }}</td><td>{{ e.reference or '—' }}</td><td>{{ e.detail or '—' }}</td></tr>{% endfor %}
+    </tbody></table>{% else %}<div class="empty">Inga admin-händelser ännu.</div>{% endif %}
+  </div>
+
+  <p class="note">Backend V10 är slutversionen för demo/deployment-förberedelse: V9-funktionerna plus CSRF-skydd för Admin, säkerhetsheaders, CSV-export, adminhistorik och produktionskonfiguration.</p>
 </main>
 </body>
 </html>
