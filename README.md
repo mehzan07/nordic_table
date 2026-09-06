@@ -1,33 +1,38 @@
-# Test Restaurant – Backend V7
+# Test Restaurant – Backend V8 fixed fixed
 
-Backend V7 preserves all V5 features and adds live, capacity-aware reservation times to the customer booking form.
+Backend V8 fixed fixed preserves V7 and improves the restaurant Admin dashboard.
 
-## New in V7
+## New in V8 fixed
 
-- The reservation form checks the backend for the selected day's current capacity.
-- Time options display remaining seats, for example `19:30 — 6 platser kvar`.
-- Fully booked slots are disabled automatically.
-- If the selected party size is larger than the remaining capacity, that time is disabled.
-- Changing the number of guests re-evaluates the same day's slots immediately.
-- The existing server-side capacity check remains authoritative, so a booking is still rejected if another customer fills the slot before save.
-- `GET /api/availability?date=YYYY-MM-DD` now returns all opening-hour slots for that date in one request.
-- The older single-slot API remains supported: `GET /api/availability?date=YYYY-MM-DD&time=HH:MM`.
-- Health endpoint reports Backend V7.
+- Admin dashboard statistics:
+  - active reservations today (pending + confirmed)
+  - confirmed guests today
+  - upcoming pending reservations
+  - upcoming active reservations
+- Search reservations by reference, customer name, phone number, or email.
+- Search can be combined with the existing status and date filters.
+- Clear Swedish status badges for Väntar, Bekräftad, and Avbokad.
+- V7 capacity overview remains available with its independent date selector.
+- Reservation form still supports 1–20 guests and live remaining-seat availability.
+- Health endpoint reports Backend V8 fixed fixed.
 
-## V5 features retained
+## Features retained from V7
 
 - Flask + SQLite reservation storage.
 - Password-protected Admin page.
-- Pending / confirmed / cancelled statuses.
-- Capacity per 30-minute slot; cancelled reservations free capacity.
+- Pending / confirmed / cancelled reservation statuses.
+- Live capacity-aware customer time selection.
+- Server-side overbooking protection.
+- Capacity overview for any selected date.
+- Cancelled reservations free capacity immediately.
 - Local `.eml` email outbox.
 - Real SMTP configuration through private `.env`.
-- Step-by-step SMTP diagnostics: connection, EHLO, STARTTLS and authentication.
-- Test-email button and email event log.
+- SMTP diagnostics and Admin test-email button.
+- Email delivery event log.
 
 ## Safe configuration
 
-Keep real secrets only in `.env`. Never commit `.env`, `reservations.db` or `email_outbox/`.
+Keep real secrets only in `.env`. Never commit `.env`, `reservations.db`, or `email_outbox/`.
 
 Local email mode:
 
@@ -56,14 +61,14 @@ Website: `http://127.0.0.1:5000`
 
 Admin: `http://127.0.0.1:5000/admin`
 
-## Recommended V7 test
+## Recommended V8 fixed test
 
-1. Start Flask and open the restaurant website.
-2. Select a future date. The time list should show remaining seats.
-3. Change the number of guests. Any slot without enough capacity should become disabled.
-4. Create a reservation and confirm that it appears in Admin.
-5. Return to the same date and verify that the remaining capacity has decreased.
-6. Cancel the reservation in Admin and verify that the capacity becomes available again after refreshing/reselecting the date.
-7. SMTP can remain in outbox mode while testing V7 availability; Yahoo SMTP is not required for this feature.
+1. Open Admin and verify the four dashboard cards.
+2. Search by part of a reservation reference.
+3. Search by customer name, phone number, and email.
+4. Combine search with status or date filters.
+5. Verify status badges change when a reservation is confirmed, pending, or cancelled.
+6. Confirm V7 capacity overview still works for a selected future date.
+7. Confirm the customer booking form still supports up to 20 guests.
 
-V7 is still a development/demo version. Production deployment should later add CSRF protection, stronger authentication, HTTPS configuration, rate limiting and managed secrets.
+V8 fixed is still a development/demo version. Production deployment should later add CSRF protection, stronger authentication, HTTPS configuration, rate limiting, backups, and managed secrets.

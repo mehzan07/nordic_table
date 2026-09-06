@@ -802,7 +802,8 @@ def admin_logout():
 @admin_required
 def admin():
     status_filter = request.args.get("status", "").strip().lower()
-    date_filter = request.args.get("date", "").strip()
+    date_filter = request.args.get("reservation_date", request.args.get("date", "")).strip()
+    search_filter = request.args.get("q", "").strip()
     overview_date_filter = request.args.get("overview_date", "").strip()
 
     query = "SELECT * FROM reservations WHERE 1=1"
@@ -816,10 +817,36 @@ def admin():
         query += " AND reservation_date = ?"
         params.append(date_filter)
 
+    if search_filter:
+        like = f"%{search_filter}%"
+        query += """
+            AND (
+                reference LIKE ?
+                OR name LIKE ?
+                OR phone LIKE ?
+                OR email LIKE ?
+            )
+        """
+        params.extend([like, like, like, like])
+
     query += " ORDER BY reservation_date ASC, reservation_time ASC, created_at DESC"
+
+    today_iso = date.today().isoformat()
 
     with get_db() as conn:
         rows = conn.execute(query, params).fetchall()
+
+        stats = conn.execute(
+            """
+            SELECT
+                SUM(CASE WHEN reservation_date = ? AND status IN ('pending', 'confirmed') THEN 1 ELSE 0 END) AS reservations_today,
+                SUM(CASE WHEN reservation_date = ? AND status = 'confirmed' THEN guests ELSE 0 END) AS confirmed_guests_today,
+                SUM(CASE WHEN reservation_date >= ? AND status = 'pending' THEN 1 ELSE 0 END) AS pending_upcoming,
+                SUM(CASE WHEN reservation_date >= ? AND status IN ('pending', 'confirmed') THEN 1 ELSE 0 END) AS upcoming_active
+            FROM reservations
+            """,
+            (today_iso, today_iso, today_iso, today_iso),
+        ).fetchone()
         email_rows = conn.execute(
             """
             SELECT * FROM email_events
@@ -842,6 +869,11 @@ def admin():
         max_guests_per_slot=MAX_GUESTS_PER_SLOT,
         status_filter=status_filter,
         date_filter=date_filter,
+        search_filter=search_filter,
+        reservations_today=int(stats["reservations_today"] or 0),
+        confirmed_guests_today=int(stats["confirmed_guests_today"] or 0),
+        pending_upcoming=int(stats["pending_upcoming"] or 0),
+        upcoming_active=int(stats["upcoming_active"] or 0),
         overview_date_filter=overview_date_filter,
         overview_date=overview_date,
         capacity_overview=overview,
@@ -924,9 +956,9 @@ def admin_email_test():
 
     ok, message = send_email(
         recipient=recipient,
-        subject="Test Restaurant – Backend V7 testmail",
+        subject="Test Restaurant – Backend V8 testmail",
         body=(
-            "Detta är ett testmail från Test Restaurant Backend V7.\n\n"
+            "Detta är ett testmail från Test Restaurant Backend V8.\n\n"
             f"Email-läge: {email_mode()}\n"
             f"Skickat: {datetime.now().isoformat(timespec='seconds')}\n"
         ),
@@ -944,7 +976,7 @@ def health():
         {
             "ok": True,
             "database": DB_PATH.name,
-            "backend_version": "V7",
+            "backend_version": "V8-fixed",
             "max_guests_per_slot": MAX_GUESTS_PER_SLOT,
             "email_mode": email_mode(),
             "restaurant_email": RESTAURANT_EMAIL,

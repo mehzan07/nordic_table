@@ -26,12 +26,13 @@
     .flash{white-space:pre-line;padding:12px 14px;border-radius:10px;margin-bottom:14px;border:1px solid #ddd}.flash.success{background:#edf8ef;border-color:#b9dfc0}.flash.error{background:#fff0f0;border-color:#efb0b0}.flash.info{background:#eef5ff;border-color:#b9d4ef}
     h2{margin-top:32px}.email-mode{font-weight:800}.small-table table{min-width:760px}.delivery-sent,.delivery-saved{font-weight:800}.delivery-failed{font-weight:800;color:#9a1f1f}
     .capacity-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0 24px}.capacity-card{background:white;border:1px solid #ddd5c9;border-radius:12px;padding:12px}.capacity-card strong{display:block;font-size:17px;margin-bottom:5px}.capacity-card small{display:block;opacity:.72}.capacity-full{border-color:#e1aaaa;background:#fff5f5}.capacity-low{border-color:#e3c77a;background:#fffaf0}.capacity-available{border-color:#b8d8bd;background:#f5fbf6}
+    .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 24px}.dashboard-card{background:white;border:1px solid #ddd5c9;border-radius:14px;padding:16px}.dashboard-card .value{font-size:28px;font-weight:900;line-height:1.1}.dashboard-card .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.65;margin-top:6px}.search-field{min-width:240px}.status-badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.status-pending{background:#fff5d8;color:#7a5700}.status-confirmed{background:#e8f7ec;color:#1d6b31}.status-cancelled{background:#f4e9e9;color:#8d2b2b}
   </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V7 · SQLite · kapacitetsöversikt · SMTP-diagnostik</small></div>
+    <div><strong>Test Restaurant – Admin</strong><br><small>Backend V8 · SQLite · dashboard · sök/filter · kapacitetsöversikt</small></div>
     <div><a href="/">← Webbplats</a>&nbsp;&nbsp;<form method="post" action="/admin/logout"><button type="submit">Logga ut</button></form></div>
   </div>
 </header>
@@ -40,10 +41,19 @@
     {% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
   {% endwith %}
 
+
+  <h2>Dashboard</h2>
+  <div class="dashboard-grid">
+    <div class="dashboard-card"><div class="value">{{ reservations_today }}</div><div class="label">Aktiva bokningar idag</div></div>
+    <div class="dashboard-card"><div class="value">{{ confirmed_guests_today }}</div><div class="label">Bekräftade gäster idag</div></div>
+    <div class="dashboard-card"><div class="value">{{ pending_upcoming }}</div><div class="label">Väntande kommande bokningar</div></div>
+    <div class="dashboard-card"><div class="value">{{ upcoming_active }}</div><div class="label">Aktiva kommande bokningar</div></div>
+  </div>
+
   <div class="summary">
     <div class="pill">Visade bokningar: <strong>{{ reservations|length }}</strong></div>
   <div class="flash info">
-    <strong>V7 email- och SMTP-test:</strong>
+    <strong>V8 email- och SMTP-test:</strong>
     <form method="post" action="/admin/email-test" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px">
       <label style="display:flex;flex-direction:column;gap:5px">
         Testmottagare
@@ -74,8 +84,8 @@
   </form>
   {% if capacity_overview %}
     <div class="summary">
-      <div class="pill">Aktiva gäster över dagens tider: <strong>{{ overview_booked }}</strong></div>
-      <div class="pill">Lediga platser över dagens tider: <strong>{{ overview_remaining }}</strong></div>
+      <div class="pill">Aktiva gäster på valt datum: <strong>{{ overview_booked }}</strong></div>
+      <div class="pill">Lediga platser på valt datum: <strong>{{ overview_remaining }}</strong></div>
     </div>
     <div class="capacity-grid">
       {% for slot in capacity_overview %}
@@ -91,11 +101,21 @@
     <div class="flash info">Restaurangen är stängd eller datumet saknar bokningsbara tider.</div>
   {% endif %}
 
-  <form class="filters" method="get" action="/admin">
+  <form class="filters" method="get" action="/admin" autocomplete="off">
+    <input type="hidden" name="overview_date" value="{{ overview_date }}">
+    <label>Sök bokning<input class="search-field" type="search" name="q" value="{{ search_filter }}" placeholder="Referens, namn, telefon eller email"></label>
     <label>Status<select name="status"><option value="">Alla</option><option value="pending" {% if status_filter=='pending' %}selected{% endif %}>Väntar</option><option value="confirmed" {% if status_filter=='confirmed' %}selected{% endif %}>Bekräftad</option><option value="cancelled" {% if status_filter=='cancelled' %}selected{% endif %}>Avbokad</option></select></label>
-    <label>Datum<input type="date" name="date" value="{{ date_filter }}"></label>
-    <button class="btn primary" type="submit">Filtrera</button><a class="btn" href="/admin">Rensa filter</a>
+    <label>Datum<input type="date" name="reservation_date" value="{{ date_filter }}" autocomplete="off"></label>
+    <button class="btn primary" type="submit">Sök / filtrera</button><a class="btn" href="/admin">Rensa filter</a>
   </form>
+
+  {% if search_filter or status_filter or date_filter %}
+    <div class="flash info"><strong>Aktiva bokningsfilter:</strong>
+      {% if search_filter %} Sök = “{{ search_filter }}”{% endif %}
+      {% if status_filter %} · Status = {{ 'Väntar' if status_filter == 'pending' else ('Bekräftad' if status_filter == 'confirmed' else 'Avbokad') }}{% endif %}
+      {% if date_filter %} · Datum = {{ date_filter }}{% endif %}
+    </div>
+  {% endif %}
 
   {% if reservations %}
   <div class="table-wrap"><table><thead><tr><th>Referens</th><th>Datum</th><th>Tid</th><th>Gäster</th><th>Kund</th><th>Kontakt</th><th>Vald rätt</th><th>Önskemål</th><th>Status</th><th>Åtgärd</th></tr></thead><tbody>
@@ -103,7 +123,7 @@
     <tr>
       <td class="ref">{{ r.reference }}</td><td>{{ r.reservation_date }}</td><td>{{ r.reservation_time }}</td><td>{{ r.guests }}</td><td>{{ r.name }}</td><td>{{ r.phone }}<br>{{ r.email }}</td>
       <td class="dish">{% if r.selected_dish_name_sv %}{{ r.selected_dish_name_sv }}{% if r.selected_dish_price %} – {{ r.selected_dish_price }}{% endif %}{% else %}—{% endif %}</td>
-      <td>{{ r.special_requests or '—' }}</td><td class="status">{{ r.status }}</td>
+      <td>{{ r.special_requests or '—' }}</td><td class="status"><span class="status-badge status-{{ r.status }}">{% if r.status == 'pending' %}Väntar{% elif r.status == 'confirmed' %}Bekräftad{% else %}Avbokad{% endif %}</span></td>
       <td><form class="actions" method="post" action="/admin/reservations/{{ r.id }}/status">
         <button class="confirm" name="status" value="confirmed" {% if r.status=='confirmed' %}disabled title="Redan bekräftad"{% endif %}>Bekräfta</button>
         <button name="status" value="pending" {% if r.status=='pending' %}disabled title="Redan väntande"{% endif %}>Väntar</button>
@@ -121,7 +141,7 @@
     </tbody></table>{% else %}<div class="empty">Inga email-händelser ännu.</div>{% endif %}
   </div>
 
-  <p class="note">Backend V7 behåller V6 live kapacitetskontroll och lägger till en tydlig kapacitetsöversikt i Admin samt upp till 20 gäster i bokningsformuläret.</p>
+  <p class="note">Backend V8 behåller V7 och lägger till dashboard-statistik, fritextsökning i bokningar och tydligare statusmarkeringar i Admin.</p>
 </main>
 </body>
 </html>
