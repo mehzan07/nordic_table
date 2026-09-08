@@ -1863,3 +1863,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.v6RefreshCapacity=refreshCapacity;
 })();
+
+// V10 Mobile Final: close mobile navigation predictably.
+(function(){
+  const nav=document.querySelector('.nav');
+  const toggle=document.querySelector('#toggle');
+  if(!nav||!toggle) return;
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&nav.classList.contains('open')){
+      nav.classList.remove('open');
+      toggle.setAttribute('aria-expanded','false');
+      toggle.focus();
+    }
+  });
+  document.addEventListener('click',e=>{
+    if(window.innerWidth<=800&&nav.classList.contains('open')&&!nav.contains(e.target)){
+      nav.classList.remove('open');
+      toggle.setAttribute('aria-expanded','false');
+    }
+  });
+  window.addEventListener('resize',()=>{
+    if(window.innerWidth>800&&nav.classList.contains('open')){
+      nav.classList.remove('open');
+      toggle.setAttribute('aria-expanded','false');
+    }
+  });
+})();

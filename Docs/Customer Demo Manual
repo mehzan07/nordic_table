@@ -1,0 +1,218 @@
+Yes. You should stop here for today. The important thing is that **V10 works on Windows 11 and the iPhone booking reached the Admin database successfully**.
+
+And I agree with your point: this setup is too cumbersome to perform while a customer is waiting. The right approach is to prepare and test everything **before leaving home**. Ultimately, a public deployment will be much better: you simply give the customer a normal URL and there is no hotspot/IP setup.
+
+## Put everything back to normal now
+
+### 1. Windows Mobile Hotspot
+
+Go to:
+
+**Settings → Network & internet → Mobile hotspot**
+
+Set:
+
+**Mobile hotspot → Off**
+
+Your PC will return to using your normal Wi-Fi connection.
+
+### 2. iPhone
+
+Go to:
+
+**Settings → Wi-Fi**
+
+Reconnect to your normal home Wi-Fi.
+
+You don't have to delete `RestaurantDemo`. Keeping it can actually be useful for your next test.
+
+### 3. Windows network profile
+
+Earlier we changed your home Wi-Fi from **Public** to **Private**.
+
+For your trusted home Wi-Fi, **Private is perfectly fine** and is normally what you want when devices need to communicate. You don't need to change it back.
+
+### 4. Windows Firewall
+
+We temporarily disabled the Private firewall during testing, but then turned it back on.
+
+To verify, open PowerShell **as Administrator**:
+
+```powershell
+Get-NetFirewallProfile -Profile Private
+```
+
+Look for:
+
+```text
+Enabled : True
+```
+
+If it says `False`, run:
+
+```powershell
+Set-NetFirewallProfile -Profile Private -Enabled True
+```
+
+### 5. The special Flask firewall rule
+
+We created:
+
+```text
+Test Restaurant Flask 5000
+```
+
+You can leave it because you'll need it for future local customer demonstrations.
+
+If you want your PC completely back to its previous state, you can remove it:
+
+```powershell
+Remove-NetFirewallRule -DisplayName "Test Restaurant Flask 5000"
+```
+
+But **I recommend keeping it** while you're developing and demonstrating Test Restaurant.
+
+### 6. Flask `0.0.0.0`
+
+We changed:
+
+```python
+host="127.0.0.1"
+```
+
+to:
+
+```python
+host="0.0.0.0"
+```
+
+You can **keep `0.0.0.0`** because you want to test from phones again.
+
+However, this change means Git will probably now report `app.py` as modified. **Don't commit that change tonight.** We can decide later whether this should become part of the repository or be controlled by `.env`.
+
+Stop Flask now with:
+
+```text
+Ctrl + C
+```
+
+Then you're finished.
+
+---
+
+# Customer Demo Manual — Test Restaurant V10
+
+Save this procedure for future use.
+
+### Before leaving home
+
+Start your Windows 11 PC and open the project:
+
+```powershell
+cd C:\Utvecklingprogram\AI\test_resturant
+.\.venv\Scripts\Activate.ps1
+```
+
+For a demonstration, I recommend using:
+
+```text
+EMAIL_MODE=outbox
+```
+
+in `.env`. Don't depend on Yahoo SMTP during a customer demonstration.
+
+Start the restaurant:
+
+```powershell
+python app.py
+```
+
+Confirm on the PC:
+
+`http://127.0.0.1:5000`
+
+and Admin:
+
+`http://127.0.0.1:5000/admin`
+
+For your current local demo:
+
+```text
+Admin password: demo1234
+```
+
+Never use that password when we deploy publicly.
+
+### Prepare the customer-phone network
+
+On Windows 11:
+
+**Settings → Network & internet → Mobile hotspot → On**
+
+Use the hotspot we created:
+
+```text
+RestaurantDemo
+```
+
+Connect your own iPhone to `RestaurantDemo` **before meeting the customer** and verify everything.
+
+Run:
+
+```powershell
+ipconfig
+```
+
+Find the Mobile Hotspot IPv4 address. In our successful test it was:
+
+```text
+192.168.137.1
+```
+
+Then on the phone open:
+
+`http://192.168.137.1:5000/`
+
+Don't assume the address will always be the same—check `ipconfig` before the demonstration.
+
+### During the customer demonstration
+
+The customer connects their phone to your:
+
+```text
+RestaurantDemo
+```
+
+Wi-Fi.
+
+Then they enter the address you obtained from `ipconfig`, for example:
+
+`http://192.168.137.1:5000/`
+
+They can browse the menu and make a test reservation.
+
+On your PC you keep Admin open at:
+
+`http://127.0.0.1:5000/admin`
+
+When the customer saves the reservation, refresh Admin and show them that their reservation has arrived.
+
+Then you can demonstrate **Bekräfta**, **Väntar**, **Avboka**, **Visa / redigera**, capacity management, internal notes, dashboard and CSV export.
+
+## But there is a much better final solution
+
+I would **not use this hotspot procedure as the normal way to sell/show the website**.
+
+It is useful as a backup and for development testing, but a customer shouldn't have to:
+
+> connect to RestaurantDemo → enter an IP address → wait for your local Flask server.
+
+Once we deploy V10, your demonstration becomes:
+
+> **“Open this website.”**
+
+The customer can use their own phone and mobile Internet. No Windows hotspot, no `ipconfig`, no port 5000 and no local-network troubleshooting.
+
+So when you return, I recommend that our **next job is deployment**, rather than spending more time improving this local-network method.
+
+For today: turn off Mobile Hotspot, reconnect the iPhone to normal Wi-Fi, stop Flask with `Ctrl+C`, verify the firewall is enabled, and you're finished.

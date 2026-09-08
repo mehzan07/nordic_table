@@ -70,3 +70,11 @@ Never commit or publish:
 ## Deployment note
 
 This V10 package is suitable as the final demo/development checkpoint. For a real restaurant taking customer data on the public internet, use HTTPS, strong credentials, managed backups, privacy/GDPR policies, monitoring, and a production hosting environment.
+
+## V10 Mobile Final
+
+This package adds a responsive/mobile polish pass without changing the tested V10 backend workflow. Main improvements include a more usable hamburger navigation, larger touch targets, phone-friendly hero buttons, horizontally scrollable menu filters, one-column dish cards on narrow phones, bottom-sheet style dish details, stacked reservation fields/actions, and improved mobile Admin dashboard/filter/table usability.
+
+### Desktop mobile testing
+
+Open `http://127.0.0.1:5000`, press **F12**, enable the browser **Device Toolbar**, and test at widths such as **375 px**, **390 px**, **430 px**, **768 px**, and desktop width. The final physical-device check can then be limited to one iPhone test.

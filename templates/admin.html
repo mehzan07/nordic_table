@@ -27,6 +27,17 @@
     h2{margin-top:32px}.email-mode{font-weight:800}.small-table table{min-width:760px}.delivery-sent,.delivery-saved{font-weight:800}.delivery-failed{font-weight:800;color:#9a1f1f}
     .capacity-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0 24px}.capacity-card{background:white;border:1px solid #ddd5c9;border-radius:12px;padding:12px}.capacity-card strong{display:block;font-size:17px;margin-bottom:5px}.capacity-card small{display:block;opacity:.72}.capacity-full{border-color:#e1aaaa;background:#fff5f5}.capacity-low{border-color:#e3c77a;background:#fffaf0}.capacity-available{border-color:#b8d8bd;background:#f5fbf6}
     .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 24px}.dashboard-card{background:white;border:1px solid #ddd5c9;border-radius:14px;padding:16px}.dashboard-card .value{font-size:28px;font-weight:900;line-height:1.1}.dashboard-card .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.65;margin-top:6px}.search-field{min-width:240px}.status-badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.status-pending{background:#fff5d8;color:#7a5700}.status-confirmed{background:#e8f7ec;color:#1d6b31}.status-cancelled{background:#f4e9e9;color:#8d2b2b}
+    @media(max-width:700px){
+      header{padding:16px 14px} header .wrap{align-items:flex-start;gap:10px} header .wrap>div:last-child{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end} header small{font-size:11px}
+      main{margin:20px auto;padding:0 12px} h2{font-size:20px;margin-top:26px}
+      .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dashboard-card{padding:13px}.dashboard-card .value{font-size:24px}.dashboard-card .label{font-size:10px}
+      .summary{gap:8px}.pill,.btn,button{min-height:42px}.summary>.btn{display:flex;align-items:center}
+      .filters{display:grid;grid-template-columns:1fr;padding:12px}.filters label,.search-field,.filters input,.filters select,.filters button,.filters .btn{width:100%;min-width:0}.filters input,.filters select{min-height:46px;font-size:16px}
+      .capacity-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.capacity-card{padding:10px}
+      .table-wrap{border-radius:10px;-webkit-overflow-scrolling:touch} table{min-width:920px} th,td{padding:11px 10px}.small-table table{min-width:680px}
+      form.actions{flex-wrap:wrap}.flash{font-size:13px;overflow-wrap:anywhere}.flash form{width:100%!important}.flash form label,.flash form input{width:100%}
+    }
+    @media(max-width:430px){.dashboard-grid{grid-template-columns:1fr 1fr}.capacity-grid{grid-template-columns:1fr 1fr}header .wrap{flex-direction:column}header .wrap>div:last-child{justify-content:flex-start}}
   </style>
 </head>
 <body>
