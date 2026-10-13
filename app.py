@@ -617,7 +617,7 @@ Status: Pending
 
 The restaurant will review your request and confirm it.
 
-Test Restaurant
+Nordic Table
 """
     else:
         subject = f"Bokningsförfrågan mottagen – {reservation['reference']}"
@@ -633,7 +633,7 @@ Status: Väntar
 
 Restaurangen granskar din förfrågan och återkommer med bekräftelse.
 
-Test Restaurant
+Nordic Table
 """
     return subject, body
 
@@ -687,7 +687,7 @@ Time: {reservation['reservation_time']}
 Guests: {reservation['guests']}
 Status: {status_text}
 
-Test Restaurant
+Nordic Table
 """
         return subjects[status], body
 
@@ -712,7 +712,7 @@ Tid: {reservation['reservation_time']}
 Gäster: {reservation['guests']}
 Status: {status_text}
 
-Test Restaurant
+Nordic Table
 """
     return subjects[status], body
 
@@ -1248,9 +1248,9 @@ def admin_email_test():
 
     ok, message = send_email(
         recipient=recipient,
-        subject="Test Restaurant – Backend V10 testmail",
+        subject="Nordic Table – Backend V10 testmail",
         body=(
-            "Detta är ett testmail från Test Restaurant Backend V10.\n\n"
+            "Detta är ett testmail från Nordic Table Backend V10.\n\n"
             f"Email-läge: {email_mode()}\n"
             f"Skickat: {datetime.now().isoformat(timespec='seconds')}\n"
         ),

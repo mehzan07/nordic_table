@@ -59,7 +59,7 @@ Set-NetFirewallProfile -Profile Private -Enabled True
 We created:
 
 ```text
-Test Restaurant Flask 5000
+Nordic Table Flask 5000
 ```
 
 You can leave it because you'll need it for future local customer demonstrations.
@@ -67,10 +67,10 @@ You can leave it because you'll need it for future local customer demonstrations
 If you want your PC completely back to its previous state, you can remove it:
 
 ```powershell
-Remove-NetFirewallRule -DisplayName "Test Restaurant Flask 5000"
+Remove-NetFirewallRule -DisplayName "Nordic Table Flask 5000"
 ```
 
-But **I recommend keeping it** while you're developing and demonstrating Test Restaurant.
+But **I recommend keeping it** while you're developing and demonstrating Nordic Table
 
 ### 6. Flask `0.0.0.0`
 
@@ -100,7 +100,7 @@ Then you're finished.
 
 ---
 
-# Customer Demo Manual — Test Restaurant V10
+# Customer Demo Manual — Nordic Table V10
 
 Save this procedure for future use.
 

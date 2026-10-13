@@ -1,4 +1,4 @@
-# Test Restaurant – Backend V10 Final
+# Nordic Table – Backend V10 Final
 
 Backend V10 is the final consolidated demo/deployment-ready checkpoint built on the tested V9 reservation system.
 
