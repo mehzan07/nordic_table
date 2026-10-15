@@ -7,6 +7,11 @@ import re
 import secrets
 import smtplib
 import sqlite3
+
+import json
+import urllib.error
+import urllib.request
+
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from functools import wraps
@@ -53,6 +58,8 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() in {"1", "true", "yes", "on"}
 SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").lower() in {"1", "true", "yes", "on"}
 EMAIL_FROM = os.getenv("EMAIL_FROM", SMTP_USERNAME or "bookings@test-restaurant.local")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
+RESEND_API_URL = "https://api.resend.com/emails"
 RESTAURANT_EMAIL = os.getenv("RESTAURANT_EMAIL", "restaurant@test-restaurant.local")
 
 REFERENCE_RE = re.compile(r"^TR-\d{6}-\d{4}$")
@@ -436,8 +443,9 @@ def admin_required(view_func):
 
     return wrapped
 
-
 def email_mode() -> str:
+    if EMAIL_MODE == "resend":
+        return "resend"
     if EMAIL_MODE == "smtp":
         return "smtp"
     return "local_outbox"
@@ -536,6 +544,7 @@ def smtp_diagnostic() -> tuple[bool, list[str]]:
                     pass
 
 
+
 def send_email(
     *,
     recipient: str,
@@ -556,13 +565,80 @@ def send_email(
         try:
             OUTBOX_DIR.mkdir(parents=True, exist_ok=True)
             safe_ref = re.sub(r"[^A-Za-z0-9_-]+", "_", event_type)
-            filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{safe_ref}.eml"
+            filename = (
+                f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+                f"_{safe_ref}.eml"
+            )
             (OUTBOX_DIR / filename).write_bytes(message.as_bytes())
-            log_email_event(reservation_id, recipient, subject, event_type, mode, "saved")
+            log_email_event(
+                reservation_id, recipient, subject, event_type,
+                mode, "saved"
+            )
             return True, f"Email sparades lokalt i email_outbox/{filename}"
         except Exception as exc:
-            log_email_event(reservation_id, recipient, subject, event_type, mode, "failed", str(exc))
+            log_email_event(
+                reservation_id, recipient, subject, event_type,
+                mode, "failed", str(exc)
+            )
             return False, f"Kunde inte spara lokalt email: {exc}"
+
+    if mode == "resend":
+        stage = "configuration"
+        try:
+            if not RESEND_API_KEY:
+                raise RuntimeError("RESEND_API_KEY is not configured.")
+
+            payload = {
+                "from": EMAIL_FROM,
+                "to": [recipient],
+                "subject": subject,
+                "text": body,
+            }
+
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                RESEND_API_URL,
+                data=data,
+               headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+            "User-Agent": "Nordic-Table/1.0",
+            },
+                method="POST",
+            )
+
+            stage = "Resend HTTPS request"
+            with urllib.request.urlopen(req, timeout=20) as response:
+                response.read()
+
+            log_email_event(
+                reservation_id, recipient, subject, event_type,
+                mode, "sent"
+            )
+            return True, f"Email accepted by Resend for {recipient}"
+
+        except urllib.error.HTTPError as exc:
+            try:
+                error_detail = exc.read().decode("utf-8", errors="replace")
+            except Exception:
+                error_detail = "No response details available."
+
+            detail = (
+                f"Resend HTTP error {exc.code}: {error_detail[:500]}"
+            )
+            log_email_event(
+                reservation_id, recipient, subject, event_type,
+                mode, "failed", detail
+            )
+            return False, f"Email could not be sent: {detail}"
+
+        except Exception as exc:
+            detail = f"{stage}: {type(exc).__name__}: {exc}"
+            log_email_event(
+                reservation_id, recipient, subject, event_type,
+                mode, "failed", detail
+            )
+            return False, f"Email could not be sent: {detail}"
 
     stage = "configuration"
     try:
@@ -571,7 +647,9 @@ def send_email(
 
         if SMTP_USE_SSL:
             stage = "TCP/SSL connection"
-            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+            with smtplib.SMTP_SSL(
+                SMTP_HOST, SMTP_PORT, timeout=15
+            ) as smtp:
                 if SMTP_USERNAME:
                     stage = "authentication"
                     smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
@@ -579,7 +657,9 @@ def send_email(
                 smtp.send_message(message)
         else:
             stage = "TCP connection/server greeting"
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+            with smtplib.SMTP(
+                SMTP_HOST, SMTP_PORT, timeout=15
+            ) as smtp:
                 stage = "EHLO"
                 smtp.ehlo()
                 if SMTP_USE_TLS:
@@ -593,13 +673,19 @@ def send_email(
                 stage = "sending message"
                 smtp.send_message(message)
 
-        log_email_event(reservation_id, recipient, subject, event_type, mode, "sent")
+        log_email_event(
+            reservation_id, recipient, subject, event_type,
+            mode, "sent"
+        )
         return True, f"Email skickades till {recipient}"
+
     except Exception as exc:
         detail = f"{stage}: {type(exc).__name__}: {exc}"
-        log_email_event(reservation_id, recipient, subject, event_type, mode, "failed", detail)
+        log_email_event(
+            reservation_id, recipient, subject, event_type,
+            mode, "failed", detail
+        )
         return False, f"Email kunde inte skickas vid steget {detail}"
-
 
 
 def customer_received_email(reservation: sqlite3.Row) -> tuple[str, str]:
