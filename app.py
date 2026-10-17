@@ -1,4 +1,5 @@
 from __future__ import annotations
+import hmac
 
 import csv
 import io
@@ -1362,6 +1363,70 @@ def health():
             "session_cookie_secure": SESSION_COOKIE_SECURE,
         }
     )
+@app.post("/telegram/webhook")
+def telegram_webhook():
+    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()
+
+    if not telegram_token or not webhook_secret:
+        return jsonify({"ok": False, "error": "Telegram is not configured"}), 503
+
+    incoming_secret = request.headers.get(
+        "X-Telegram-Bot-Api-Secret-Token", ""
+    )
+
+    if not hmac.compare_digest(incoming_secret, webhook_secret):
+        return jsonify({"ok": False}), 403
+
+    update = request.get_json(silent=True) or {}
+    message = update.get("message") or {}
+
+    text = (message.get("text") or "").strip()
+    parts = text.split(maxsplit=1)
+    command = parts[0].split("@", 1)[0] if parts else ""
+
+    chat_id = (message.get("chat") or {}).get("id")
+
+    if not chat_id or command not in {"/start", "/help"}:
+        return jsonify({"ok": True})
+
+    payload = {
+        "chat_id": chat_id,
+        "text": (
+            "Welcome to Nordic Table! 🍽️\n\n"
+            "Explore our restaurant, browse the menu, "
+            "and reserve your table using the button below."
+        ),
+        "reply_markup": {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "Open Nordic Table",
+                        "url": "https://nordictable-production.up.railway.app/",
+                    }
+                ]
+            ]
+        },
+    }
+
+    api_request = urllib.request.Request(
+        f"https://api.telegram.org/bot{telegram_token}/sendMessage",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(api_request, timeout=10) as response:
+            result = json.loads(response.read().decode("utf-8"))
+
+        if not result.get("ok"):
+            return jsonify({"ok": False, "error": "Telegram message failed"}), 502
+
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+        return jsonify({"ok": False, "error": "Telegram API request failed"}), 502
+
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
