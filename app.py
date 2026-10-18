@@ -1402,7 +1402,7 @@ def telegram_webhook():
                 [
                     {
                         "text": "Open Nordic Table",
-                        "url": "https://nordictable-production.up.railway.app/",
+                        "url": "https://nordictable.softsolutionsahand.com/",
                     }
                 ]
             ]
